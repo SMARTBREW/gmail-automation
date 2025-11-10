@@ -79,7 +79,7 @@ const tools = [
     },
     handler: async ({ campaignName, subject, body, contacts, accountEmail }) => {
       const results = [];
-      const configured = getConfiguredAccounts().map(a => a.email);
+      const configured = getConfiguredAccounts();
       for (const entry of contacts) {
         const to = typeof entry === 'string' ? entry : entry.email;
         const requestedFrom = typeof entry === 'string' ? undefined : entry.from;

@@ -54,7 +54,7 @@ async function main() {
     process.exit(1);
   }
 
-  const configured = new Set(getConfiguredAccounts().map(a => a.email));
+  const configured = new Set(getConfiguredAccounts());
   // Try to load footer image from public folder
   let footerImgHtml = '';
   try {

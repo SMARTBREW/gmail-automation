@@ -2,7 +2,7 @@ import mongoose from '../db/mongo.js';
 
 const AccountUsageSchema = new mongoose.Schema(
   {
-    email: { type: String, unique: true, index: true },
+    email: { type: String }, // unique index defined below
     sentToday: { type: Number, default: 0 },
     lastSentAt: { type: Date },
     resetAt: { type: Date }, // next reset timestamp

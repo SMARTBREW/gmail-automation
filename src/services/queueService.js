@@ -12,6 +12,9 @@ const RESET_HOUR_LOCAL_DEFAULT = parseInt(process.env.RESET_HOUR_LOCAL || '0', 1
 const STUCK_JOB_MINUTES = parseInt(process.env.STUCK_JOB_MINUTES || '10', 10);
 const JITTER_PCT = parseFloat(process.env.JITTER_PCT || '0.1'); // 10%
 const SKIP_WEEKENDS = (process.env.SKIP_WEEKENDS || 'false') === 'true';
+// Allowed daily send window for follow-ups (24h clock). Defaults: 11:00–17:00
+const ALLOWED_WINDOW_START_HOUR = parseInt(process.env.ALLOWED_WINDOW_START_HOUR || '11', 10);
+const ALLOWED_WINDOW_END_HOUR = parseInt(process.env.ALLOWED_WINDOW_END_HOUR || '17', 10);
 
 function loadConfig() {
   try {
@@ -75,6 +78,29 @@ function ensureWeekday(date) {
   return d;
 }
 
+function clampToAllowedWindow(date) {
+  // If the time is outside the allowed daily window, move to the next start
+  const d = new Date(date);
+  const start = new Date(d);
+  start.setHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
+  const end = new Date(d);
+  end.setHours(ALLOWED_WINDOW_END_HOUR, 0, 0, 0);
+  if (ALLOWED_WINDOW_END_HOUR <= ALLOWED_WINDOW_START_HOUR) {
+    // safety: if misconfigured, don't clamp
+    return d;
+  }
+  if (d < start) {
+    return start;
+  }
+  if (d >= end) {
+    const next = new Date(d);
+    next.setDate(next.getDate() + 1);
+    next.setHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
+    return next;
+  }
+  return d; // already within window
+}
+
 function makeIdempotencyKey(obj) {
   const raw = JSON.stringify(obj);
   return crypto.createHash('sha256').update(raw).digest('hex');
@@ -103,7 +129,10 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, no
 export async function enqueueFollowup({ from, to, subject, body, headers, campaignId, originalSubject }) {
   const payload = { type: 'followup', from, to, subject, body, headers, campaignId, originalSubject };
   const idempotencyKey = makeIdempotencyKey({ ...payload, k: 'v1' });
-  const notBefore = ensureWeekday(addJitter(new Date()));
+  // For follow-ups, clamp sending to the allowed daily window (e.g., 11:00–17:00)
+  let notBefore = addJitter(new Date());
+  notBefore = clampToAllowedWindow(notBefore);
+  notBefore = ensureWeekday(notBefore);
   await Outbox.updateOne(
     { idempotencyKey },
     {

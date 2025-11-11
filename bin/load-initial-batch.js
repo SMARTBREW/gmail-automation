@@ -2,7 +2,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { connectMongo } from '../src/db/mongo.js';
 import { getTemplateForCampaign } from '../src/services/campaignDbService.js';
@@ -55,15 +55,6 @@ async function main() {
   }
 
   const configured = new Set(getConfiguredAccounts());
-  // Try to load footer image from public folder
-  let footerImgHtml = '';
-  try {
-    const pngPath = path.resolve(process.cwd(), 'public', 'WoH 2.png');
-    if (existsSync(pngPath)) {
-      const b64 = readFileSync(pngPath).toString('base64');
-      footerImgHtml = `<p style="margin:0;padding:0"><img src="data:image/png;base64,${b64}" alt="Wings of Hope" style="max-width:600px;width:100%;height:auto;display:block;border:0;outline:none;text-decoration:none"/></p>`;
-    }
-  } catch {}
   let queued = 0, failed = 0;
 
   for (const row of contacts) {
@@ -86,10 +77,6 @@ async function main() {
         body = body.replace(/{recipientName}/g, '');
       }
       body = body.replace(/{senderName}/g, senderName);
-      // Only initial mail: append image after About us block (or simply at the end if About us is absent)
-      if (footerImgHtml) {
-        body = `${body}\n${footerImgHtml}`;
-      }
 
       const notBefore = computeRandomNotBefore(windowSpec);
       await enqueueInitial({ from, to: email, subject, body, campaignName, notBefore });

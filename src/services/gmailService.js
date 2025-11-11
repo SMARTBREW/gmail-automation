@@ -87,22 +87,28 @@ async function ensureCorrectSendAsDefault(gmail, targetEmail) {
       console.warn(`  Warning: ${targetEmail} not found in "Send mail as" settings. Email may be sent from default alias.`);
       return false;
     }
-    if (targetSendAs.isDefault) {
-      console.log(` ${targetEmail} is already the default "Send mail as" address`);
+    // Also ensure displayName matches config.json
+    const desiredDisplayName = getAccountDisplayName(targetEmail) || targetSendAs.displayName || '';
+    const needsDefault = !targetSendAs.isDefault;
+    const needsName = (desiredDisplayName && targetSendAs.displayName !== desiredDisplayName);
+
+    if (!needsDefault && !needsName) {
+      console.log(` ${targetEmail} is already default with name "${targetSendAs.displayName || ''}"`);
       return true;
     }
-    
-    console.log(`Setting ${targetEmail} as default "Send mail as" address...`);
+
+    console.log(`Updating "Send mail as" for ${targetEmail} (default:${needsDefault}, name:${needsName ? `"${desiredDisplayName}"` : 'unchanged'})...`);
     await gmail.users.settings.sendAs.update({
       userId: 'me',
       sendAsEmail: targetEmail,
       requestBody: {
         ...targetSendAs,
         isDefault: true,
+        displayName: desiredDisplayName || targetSendAs.displayName,
       },
     });
-    
-    console.log(` Successfully set ${targetEmail} as default`);
+
+    console.log(` Updated "Send mail as" for ${targetEmail}`);
     return true;
   } catch (error) {
     console.warn(` Could not update "Send mail as" settings: ${error.message}`);

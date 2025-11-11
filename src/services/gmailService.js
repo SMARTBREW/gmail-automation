@@ -53,9 +53,12 @@ export function getAccountDisplayName(email) {
   return acc.displayName || '';
 }
 
-function createEmailMessage(from, to, subject, body, { inReplyTo, references } = {}) {
+function createEmailMessage(fromEmail, to, subject, body, { inReplyTo, references, displayName } = {}) {
+  // Prefer displayName from config.json; fallback to bare email local-part
+  const safeDisplay = (displayName && String(displayName).trim()) || '';
+  const fromHeader = safeDisplay ? `"${safeDisplay}" <${fromEmail}>` : fromEmail;
   const message = [
-    `From: ${from}`,
+    `From: ${fromHeader}`,
     `To: ${to}`,
     `Subject: ${subject}`,
     ...(inReplyTo ? [`In-Reply-To: ${inReplyTo}`] : []),
@@ -121,6 +124,7 @@ export async function sendEmail(from, to, subject, body, options = {}) {
     const rawMessage = createEmailMessage(actualFromEmail, to, subject, body, {
       inReplyTo: options.inReplyTo,
       references: options.references,
+      displayName: getAccountDisplayName(actualFromEmail),
     });
 
     console.log(`Sending email from ${actualFromEmail} using refresh token from config.json`);

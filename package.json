@@ -10,7 +10,8 @@
     "mcp": "node src/mcp/server.js",
     "test-campaign": "node test-campaign.js",
     "generate-token": "node generate-refresh-token.js",
-    "load-batch": "node bin/load-initial-batch.js batches/initial-contacts.json --window 10:00-10:30"
+    "load-batch": "node bin/load-initial-batch.js batches/initial-contacts.json --window 10:00-10:30",
+    "enqueue-followups": "node bin/enqueue-followups.js"
   },
   "keywords": [
     "gmail",

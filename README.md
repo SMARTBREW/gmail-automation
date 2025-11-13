@@ -1,5 +1,7 @@
 # Gmail Automation API
 
+node bin/load-initial-batch.js batches/contacts.json
+
 A Node.js + Express backend for sending emails via Gmail API using saved refresh tokens.
 
 ## Features

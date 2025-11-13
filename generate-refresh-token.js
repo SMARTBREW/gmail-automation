@@ -3,9 +3,10 @@
  * Helper script to generate refresh tokens with correct Gmail API scopes
  * 
  * This script helps you generate refresh tokens for your Gmail accounts with
- * BOTH required scopes:
+ * ALL 3 required scopes:
  * - https://www.googleapis.com/auth/gmail.send
  * - https://www.googleapis.com/auth/gmail.settings.basic
+ * - https://www.googleapis.com/auth/gmail.metadata
  */
 
 import dotenv from 'dotenv';
@@ -17,6 +18,7 @@ dotenv.config();
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.settings.basic',
+  'https://www.googleapis.com/auth/gmail.metadata',
 ];
 
 // Use urn:ietf:wg:oauth:2.0:oob as redirect URI (for installed/desktop apps)
@@ -32,7 +34,8 @@ console.log('\n🔐 Gmail Refresh Token Generator\n');
 console.log('This script will help you generate a refresh token with the required scopes.');
 console.log('\nRequired scopes:');
 console.log('  ✓ gmail.send (for sending emails)');
-console.log('  ✓ gmail.settings.basic (for managing "Send mail as" settings)\n');
+console.log('  ✓ gmail.settings.basic (for managing "Send mail as" settings)');
+console.log('  ✓ gmail.metadata (for reading headers/Message-ID for email threading)\n');
 
 console.log('⚠️  IMPORTANT: Before continuing, make sure your Google Cloud Console has:');
 console.log('   1. OAuth 2.0 Client ID (Desktop app type)');

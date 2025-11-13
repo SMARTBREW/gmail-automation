@@ -35,8 +35,14 @@ async function main() {
       const templateSubject = tpl.subjectLines[nextTouch];
       if (!templateBody) { skipped++; continue; }
 
-      // Fill body minimally (Hello + sender)
-      let body = templateBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+      // Use stored recipientName from campaign
+      const recipientName = c.recipientName || '';
+      let body = templateBody;
+      if (recipientName) {
+        body = body.replace(/{recipientName}/g, recipientName);
+      } else {
+        body = body.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+      }
       const senderName = c.displayName || getAccountDisplayName(c.from) || '';
       body = body.replace(/{senderName}/g, senderName);
 

@@ -119,13 +119,8 @@ const tools = [
         }
         const nextTouch = (c.touchpoint || 1) + 1;
         
-        let recipientName = '';
-        if (c.originalEmailBody) {
-          const nameMatch = c.originalEmailBody.match(/(?:Dear|Hi|Hello)\s+([A-Za-z]+)/i);
-          if (nameMatch && nameMatch[1]) {
-            recipientName = nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1).toLowerCase();
-          }
-        }
+        // Use stored recipientName from campaign (no need to parse from HTML body)
+        const recipientName = c.recipientName || '';
         
         const template = await getTemplateForCampaign(c.campaignName);
         const templateBody = template.templates[nextTouch];

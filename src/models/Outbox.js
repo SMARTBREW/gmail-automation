@@ -6,7 +6,7 @@ const OutboxSchema = new mongoose.Schema(
     from: { type: String, required: true, index: true },
     to: { type: String, required: true },
     subject: { type: String, required: true },
-    body: { type: String, required: true },
+    body: { type: String }, // Optional - deleted after sending to save space
     idempotencyKey: { type: String }, // unique index defined below
     headers: {
       threadId: { type: String },

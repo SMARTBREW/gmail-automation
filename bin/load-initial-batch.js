@@ -79,7 +79,7 @@ async function main() {
       body = body.replace(/{senderName}/g, senderName);
 
       const notBefore = computeRandomNotBefore(windowSpec);
-      await enqueueInitial({ from, to: email, subject, body, campaignName, notBefore });
+      await enqueueInitial({ from, to: email, subject, body, campaignName, recipientName: name, notBefore });
       queued++;
       console.log(`✅ queued: ${email} from ${from} at ~${notBefore.toLocaleTimeString()}`);
     } catch (e) {

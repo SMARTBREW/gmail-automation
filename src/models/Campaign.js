@@ -10,7 +10,7 @@ const CampaignSchema = new mongoose.Schema(
     touchpoint: { type: Number, default: 1, min: 1, max: 7, index: true },
     replied: { type: Boolean, default: false, index: true },
     lastSent: { type: Date, index: true },
-    originalEmailBody: { type: String },
+    recipientName: { type: String },
     generatedBodies: { type: [String], default: [] },
     threadId: { type: String, index: true },
     messageIds: { type: [String], default: [] },

@@ -106,8 +106,8 @@ function makeIdempotencyKey(obj) {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
-export async function enqueueInitial({ from, to, subject, body, campaignName, notBefore }) {
-  const payload = { type: 'initial', from, to, subject, body, campaignName, notBefore: notBefore ? new Date(notBefore) : undefined };
+export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, notBefore }) {
+  const payload = { type: 'initial', from, to, subject, body, campaignName, recipientName, notBefore: notBefore ? new Date(notBefore) : undefined };
   const idempotencyKey = makeIdempotencyKey({ ...payload, k: 'v1' });
   const nb = payload.notBefore ? ensureWeekday(new Date(payload.notBefore)) : ensureWeekday(addJitter(new Date()));
   await Outbox.updateOne(
@@ -116,7 +116,7 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, no
       $setOnInsert: {
         type: 'initial',
         from, to, subject, body,
-        campaignRef: { campaignName, originalSubject: subject },
+        campaignRef: { campaignName, originalSubject: subject, recipientName },
         notBefore: nb,
         status: 'pending',
         idempotencyKey,
@@ -203,6 +203,10 @@ export async function processOutboxOnce() {
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
       }
+      // Body is required for sending (but optional in schema after deletion)
+      if (!job.body) {
+        throw new Error(`Missing body for outbox job ${job._id}`);
+      }
       const headers = job.headers || {};
       const res = await sendEmail(job.from, job.to, job.subject, job.body, headers);
       // success: update usage
@@ -221,7 +225,7 @@ export async function processOutboxOnce() {
           from: job.from,
           displayName,
           subject: job.campaignRef?.originalSubject || job.subject,
-          originalEmailBody: job.body,
+          recipientName: job.campaignRef?.recipientName,
           threadId: res.threadId,
           messageId: res.messageId,
           internetMessageId: res.internetMessageId,
@@ -235,7 +239,8 @@ export async function processOutboxOnce() {
           internetMessageId: res.internetMessageId,
         });
       }
-      await Outbox.findByIdAndUpdate(job._id, { $set: { status: 'sent' } });
+      // Delete body after sending to save database space
+      await Outbox.findByIdAndUpdate(job._id, { $set: { status: 'sent' }, $unset: { body: '' } });
       processed += 1;
     } catch (err) {
       const attempts = (job.attempts || 0) + 1;

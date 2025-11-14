@@ -109,7 +109,9 @@ function makeIdempotencyKey(obj) {
 export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, notBefore }) {
   const payload = { type: 'initial', from, to, subject, body, campaignName, recipientName, notBefore: notBefore ? new Date(notBefore) : undefined };
   const idempotencyKey = makeIdempotencyKey({ ...payload, k: 'v1' });
-  const nb = payload.notBefore ? ensureWeekday(new Date(payload.notBefore)) : ensureWeekday(addJitter(new Date()));
+  // If notBefore is provided, use it directly (no jitter/weekend delays for batch loading)
+  // If not provided, add jitter and ensure weekday
+  const nb = payload.notBefore ? new Date(payload.notBefore) : ensureWeekday(addJitter(new Date()));
   await Outbox.updateOne(
     { idempotencyKey },
     {

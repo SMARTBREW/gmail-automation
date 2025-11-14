@@ -29,7 +29,9 @@ const OutboxSchema = new mongoose.Schema(
 );
 
 // Helpful indexes for queue scanning
-OutboxSchema.index({ status: 1, notBefore: 1, from: 1 });
+// Primary index for claimJobAtomically query: { status: 'pending', notBefore: { $lte: now } } sorted by { notBefore: 1, createdAt: 1 }
+OutboxSchema.index({ status: 1, notBefore: 1, createdAt: 1 });
+OutboxSchema.index({ status: 1, notBefore: 1, from: 1 }); // Keep for account-specific queries
 OutboxSchema.index({ claimedAt: 1 }, { sparse: true });
 OutboxSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 

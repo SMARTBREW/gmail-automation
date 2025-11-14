@@ -57,6 +57,10 @@ async function main() {
   const configured = new Set(getConfiguredAccounts());
   let queued = 0, failed = 0;
 
+  // Compute notBefore ONCE for all emails (unless window is specified)
+  // This ensures all emails are queued with the same timestamp
+  const baseNotBefore = windowSpec ? computeRandomNotBefore(windowSpec) : new Date();
+
   for (const row of contacts) {
     try {
       const { email, name = '', from, campaignName } = row || {};
@@ -78,7 +82,8 @@ async function main() {
       }
       body = body.replace(/{senderName}/g, senderName);
 
-      const notBefore = computeRandomNotBefore(windowSpec);
+      // Use the same notBefore for all emails (unless window is specified)
+      const notBefore = windowSpec ? computeRandomNotBefore(windowSpec) : baseNotBefore;
       await enqueueInitial({ from, to: email, subject, body, campaignName, recipientName: name, notBefore });
       queued++;
       console.log(`✅ queued: ${email} from ${from} at ~${notBefore.toLocaleTimeString()}`);

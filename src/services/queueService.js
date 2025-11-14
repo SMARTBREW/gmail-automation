@@ -16,12 +16,26 @@ const SKIP_WEEKENDS = (process.env.SKIP_WEEKENDS || 'false') === 'true';
 const ALLOWED_WINDOW_START_HOUR = parseInt(process.env.ALLOWED_WINDOW_START_HOUR || '11', 10);
 const ALLOWED_WINDOW_END_HOUR = parseInt(process.env.ALLOWED_WINDOW_END_HOUR || '17', 10);
 
+// Cache config.json to avoid file I/O on every email (config rarely changes)
+let configCache = null;
+let configCacheTime = 0;
+const CONFIG_CACHE_TTL_MS = 30 * 1000; // Cache for 30 seconds
+
 function loadConfig() {
+  const now = Date.now();
+  // Return cached config if still fresh
+  if (configCache && (now - configCacheTime) < CONFIG_CACHE_TTL_MS) {
+    return configCache;
+  }
   try {
     const cfgPath = path.resolve(process.cwd(), 'config.json');
-    return JSON.parse(readFileSync(cfgPath, 'utf8'));
+    configCache = JSON.parse(readFileSync(cfgPath, 'utf8'));
+    configCacheTime = now;
+    return configCache;
   } catch {
-    return { accounts: [] };
+    configCache = { accounts: [] };
+    configCacheTime = now;
+    return configCache;
   }
 }
 
@@ -152,8 +166,18 @@ export async function enqueueFollowup({ from, to, subject, body, headers, campai
   );
 }
 
+// Track last recovery time to avoid running on every poll
+let lastRecoveryTime = 0;
+const RECOVERY_INTERVAL_MS = 60 * 1000; // Run recovery every 60 seconds, not every poll
+
 export async function recoverStuckJobs() {
-  const threshold = new Date(Date.now() - STUCK_JOB_MINUTES * 60 * 1000);
+  const now = Date.now();
+  // Only run recovery if enough time has passed
+  if ((now - lastRecoveryTime) < RECOVERY_INTERVAL_MS) {
+    return; // Skip - too soon since last recovery
+  }
+  lastRecoveryTime = now;
+  const threshold = new Date(now - STUCK_JOB_MINUTES * 60 * 1000);
   await Outbox.updateMany(
     { status: 'sending', claimedAt: { $lte: threshold } },
     { $set: { status: 'pending', claimedAt: null, workerId: null } }
@@ -177,6 +201,21 @@ export async function cleanupOldBodies() {
     console.log(`🧹 Cleaned up ${result.modifiedCount} old outbox bodies (safety net)`);
   }
   return result.modifiedCount;
+}
+
+// Cache account usage to avoid repeated DB queries for the same account
+const usageCache = new Map(); // email -> { usage, lastChecked }
+const USAGE_CACHE_TTL_MS = 5 * 1000; // Cache usage for 5 seconds
+
+async function getCachedUsage(email) {
+  const now = Date.now();
+  const cached = usageCache.get(email);
+  if (cached && (now - cached.lastChecked) < USAGE_CACHE_TTL_MS) {
+    return cached.usage;
+  }
+  const usage = await getOrInitUsage(email);
+  usageCache.set(email, { usage, lastChecked: now });
+  return usage;
 }
 
 async function claimJobAtomically(now) {
@@ -203,13 +242,23 @@ function backoffMs(attempts) {
 
 export async function processOutboxOnce() {
   await recoverStuckJobs();
+  // Use consistent timestamp throughout the batch (permanent optimization)
   const now = new Date();
+  const nowMs = now.getTime(); // Use milliseconds for rate limit checks
   let processed = 0;
+  // Track usage per account in this batch to avoid repeated DB queries
+  const accountUsageMap = new Map();
+  
   for (let i = 0; i < 50; i++) {
     const job = await claimJobAtomically(now);
     if (!job) break;
     try {
-      const usage = await getOrInitUsage(job.from);
+      // Use cached usage to avoid repeated DB queries for same account
+      let usage = accountUsageMap.get(job.from);
+      if (!usage) {
+        usage = await getCachedUsage(job.from);
+        accountUsageMap.set(job.from, usage);
+      }
       const limits = getAccountLimits(job.from);
       // Daily cap check
       if (usage.sentToday >= limits.dailyCap) {
@@ -217,9 +266,9 @@ export async function processOutboxOnce() {
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: usage.resetAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
       }
-      // Min interval check
+      // Min interval check - use consistent timestamp (permanent optimization)
       const minIntervalMs = limits.minIntervalMs;
-      if (usage.lastSentAt && Date.now() - new Date(usage.lastSentAt).getTime() < minIntervalMs) {
+      if (usage.lastSentAt && nowMs - new Date(usage.lastSentAt).getTime() < minIntervalMs) {
         // Reschedule for exactly minIntervalMs later (no jitter to avoid unnecessary delays)
         const nextAt = new Date(new Date(usage.lastSentAt).getTime() + minIntervalMs);
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
@@ -232,25 +281,36 @@ export async function processOutboxOnce() {
       const headers = job.headers || {};
       const res = await sendEmail(job.from, job.to, job.subject, job.body, headers);
       
-      // Delete body IMMEDIATELY after successful send to save database space
-      // Do this first before other operations to ensure body is removed even if later steps fail
+      // Update usage immediately (in memory) for next email's rate limit check
+      // Use consistent timestamp (permanent optimization)
+      usage.sentToday += 1;
+      usage.lastSentAt = now; // Use batch timestamp for consistency
+      if (!usage.resetAt || usage.resetAt <= now) {
+        usage.resetAt = computeNextResetAt(limits.resetHourLocal);
+      }
+      // Update cache immediately so next email can use updated usage
+      usageCache.set(job.from, { usage, lastChecked: nowMs });
+      accountUsageMap.set(job.from, usage);
+      
+      // Update outbox status immediately (must complete to mark job as sent)
+      // Delete body to save database space
       await Outbox.findByIdAndUpdate(job._id, { 
         $set: { status: 'sent' }, 
         $unset: { body: '' } 
       });
       
-      // success: update usage
-      usage.sentToday += 1;
-      usage.lastSentAt = new Date();
-      if (!usage.resetAt || usage.resetAt <= new Date()) {
-        usage.resetAt = computeNextResetAt(limits.resetHourLocal);
-      }
-      await usage.save();
-      // campaign bookkeeping
+      // Save usage in background (fire and forget - already updated in memory/cache)
+      // This doesn't block the next email from processing
+      usage.save().catch(err => {
+        console.error(`Failed to save usage for ${job.from}:`, err.message);
+      });
+      
+      // campaign bookkeeping - fire and forget to not block next email
+      // These operations are not critical for the next email to send
       if (job.type === 'initial') {
         const displayName = getAccountDisplayName(job.from);
-        // Always pass recipientName (even if empty) to ensure it's saved for follow-ups
-        await createCampaignRecord({
+        // Don't await - let it run in background to speed up processing
+        createCampaignRecord({
           campaignName: job.campaignRef?.campaignName,
           to: job.to,
           from: job.from,
@@ -260,14 +320,19 @@ export async function processOutboxOnce() {
           threadId: res.threadId,
           messageId: res.messageId,
           internetMessageId: res.internetMessageId,
+        }).catch(err => {
+          console.error(`Failed to create campaign record for ${job.to}:`, err.message);
         });
       } else if (job.type === 'followup' && job.campaignRef?.campaignId) {
-        await advanceTouchpoint({
+        // Don't await - let it run in background
+        advanceTouchpoint({
           campaignId: job.campaignRef.campaignId,
           newBody: job.body,
           newMessageId: res.messageId,
           threadId: res.threadId,
           internetMessageId: res.internetMessageId,
+        }).catch(err => {
+          console.error(`Failed to advance touchpoint for campaign ${job.campaignRef.campaignId}:`, err.message);
         });
       }
       processed += 1;

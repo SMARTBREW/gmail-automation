@@ -6,17 +6,16 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-function loadConfig() {
-  const configPath = join(__dirname, '../../config.json');
-  try {
-    const configData = readFileSync(configPath, 'utf8');
-    return JSON.parse(configData);
-  } catch (error) {
-    throw new Error(`Failed to load config.json: ${error.message}`);
-  }
-}
+// Cache OAuth2 clients and Gmail API clients per account (permanent optimization)
+const oauth2ClientCache = new Map(); // email -> OAuth2Client
+const gmailClientCache = new Map(); // email -> Gmail API client
 
 function getOAuth2Client(email, refreshToken) {
+  // Return cached client if available
+  if (oauth2ClientCache.has(email)) {
+    return oauth2ClientCache.get(email);
+  }
+  // Create new client and cache it
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -25,7 +24,40 @@ function getOAuth2Client(email, refreshToken) {
   oauth2Client.setCredentials({
     refresh_token: refreshToken,
   });
+  oauth2ClientCache.set(email, oauth2Client);
   return oauth2Client;
+}
+
+function getGmailClient(email, refreshToken) {
+  // Return cached Gmail client if available
+  if (gmailClientCache.has(email)) {
+    return gmailClientCache.get(email);
+  }
+  // Create new Gmail client and cache it (reuses OAuth2 client)
+  const oauth2Client = getOAuth2Client(email, refreshToken);
+  const gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
+  gmailClientCache.set(email, gmailClient);
+  return gmailClient;
+}
+
+// Cache config.json reads (shared with queueService pattern)
+let configCache = null;
+let configCacheTime = 0;
+const CONFIG_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+
+function loadConfig() {
+  const now = Date.now();
+  if (configCache && (now - configCacheTime) < CONFIG_CACHE_TTL_MS) {
+    return configCache;
+  }
+  try {
+    const configPath = join(__dirname, '../../config.json');
+    configCache = JSON.parse(readFileSync(configPath, 'utf8'));
+    configCacheTime = now;
+    return configCache;
+  } catch (error) {
+    throw new Error(`Failed to load config.json: ${error.message}`);
+  }
 }
 
 function getAccountByEmail(email) {
@@ -76,7 +108,19 @@ function createEmailMessage(fromEmail, to, subject, body, { inReplyTo, reference
   return encodedMessage;
 }
 
+// Cache send-as verification per account to avoid API calls on every email
+const sendAsCache = new Map(); // email -> { verified: boolean, lastChecked: Date }
+const SEND_AS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes - only check once per 5 minutes per account
+
 async function ensureCorrectSendAsDefault(gmail, targetEmail) {
+  const now = new Date();
+  const cached = sendAsCache.get(targetEmail);
+  
+  // Use cache if verified recently (within TTL)
+  if (cached && cached.verified && (now - cached.lastChecked) < SEND_AS_CACHE_TTL_MS) {
+    return true; // Skip API call - already verified recently
+  }
+  
   try {
     const sendAsResponse = await gmail.users.settings.sendAs.list({ userId: 'me' });
     const sendAsAddresses = sendAsResponse.data.sendAs || [];
@@ -85,6 +129,7 @@ async function ensureCorrectSendAsDefault(gmail, targetEmail) {
     );
     if (!targetSendAs) {
       console.warn(`  Warning: ${targetEmail} not found in "Send mail as" settings. Email may be sent from default alias.`);
+      sendAsCache.set(targetEmail, { verified: false, lastChecked: now });
       return false;
     }
     // Also ensure displayName matches config.json
@@ -93,7 +138,8 @@ async function ensureCorrectSendAsDefault(gmail, targetEmail) {
     const needsName = (desiredDisplayName && targetSendAs.displayName !== desiredDisplayName);
 
     if (!needsDefault && !needsName) {
-      console.log(` ${targetEmail} is already default with name "${targetSendAs.displayName || ''}"`);
+      // Cache the successful verification
+      sendAsCache.set(targetEmail, { verified: true, lastChecked: now });
       return true;
     }
 
@@ -109,10 +155,13 @@ async function ensureCorrectSendAsDefault(gmail, targetEmail) {
     });
 
     console.log(` Updated "Send mail as" for ${targetEmail}`);
+    // Cache the successful update
+    sendAsCache.set(targetEmail, { verified: true, lastChecked: now });
     return true;
   } catch (error) {
     console.warn(` Could not update "Send mail as" settings: ${error.message}`);
     console.warn(` You may need to grant "https://www.googleapis.com/auth/gmail.settings.basic" scope.`);
+    sendAsCache.set(targetEmail, { verified: false, lastChecked: now });
     return false;
   }
 }
@@ -124,8 +173,8 @@ export async function sendEmail(from, to, subject, body, options = {}) {
     if (from.toLowerCase() !== actualFromEmail.toLowerCase()) {
       console.warn(` Warning: 'from' parameter (${from}) doesn't match account email (${actualFromEmail}). Using account email from config.json.`);
     }
-    const oauth2Client = getOAuth2Client(actualFromEmail, account.refreshToken);
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    // Use cached Gmail client (permanent optimization - avoids recreating on every email)
+    const gmail = getGmailClient(actualFromEmail, account.refreshToken);
     await ensureCorrectSendAsDefault(gmail, actualFromEmail);
     const rawMessage = createEmailMessage(actualFromEmail, to, subject, body, {
       inReplyTo: options.inReplyTo,
@@ -133,7 +182,6 @@ export async function sendEmail(from, to, subject, body, options = {}) {
       displayName: getAccountDisplayName(actualFromEmail),
     });
 
-    console.log(`Sending email from ${actualFromEmail} using refresh token from config.json`);
     const response = await gmail.users.messages.send({
       userId: 'me',
       requestBody: {
@@ -142,32 +190,24 @@ export async function sendEmail(from, to, subject, body, options = {}) {
       },
     });
 
+    // Fetch internetMessageId for threading (required for follow-ups)
+    // This is fast - just one metadata API call
     let internetMessageId = null;
-    let actualFromUsed = null;
     try {
       const sentMessage = await gmail.users.messages.get({
         userId: 'me',
         id: response.data.id,
         format: 'metadata',
-        metadataHeaders: ['Message-Id', 'Message-ID', 'From'],
+        metadataHeaders: ['Message-Id', 'Message-ID'],
       });
       const headers = Object.fromEntries(
         (sentMessage.data.payload?.headers || []).map(h => [h.name, h.value])
       );
       const msgIdRaw = headers['Message-Id'] || headers['Message-ID'] || '';
       internetMessageId = msgIdRaw && !/^<.*>$/.test(msgIdRaw) ? `<${msgIdRaw}>` : msgIdRaw;
-      actualFromUsed = headers['From'] || '';
-      const fromEmailMatch = actualFromUsed.match(/<([^>]+)>/) || actualFromUsed.match(/([^\s<>@]+@[^\s<>@]+)/);
-      const fromEmailUsed = fromEmailMatch ? fromEmailMatch[1] || fromEmailMatch[0] : '';
-      
-      if (fromEmailUsed.toLowerCase() !== actualFromEmail.toLowerCase()) {
-        console.error(`ERROR: Email sent from ${fromEmailUsed} instead of ${actualFromEmail} from config.json!`);
-        console.error(`This means Gmail is using a "Send mail as" alias. Please set ${actualFromEmail} as primary in Gmail Settings.`);
-      } else {
-        console.log(`Verified: Email sent from ${fromEmailUsed} (matches config.json)`);
-      }
     } catch (e) {
-      console.warn('Could not fetch sent message details:', e.message);
+      // If we can't get Message-ID, continue anyway - threading might still work with threadId
+      console.warn(`Could not fetch Message-ID for ${response.data.id}: ${e.message}`);
     }
 
     return {
@@ -193,8 +233,8 @@ export function getConfiguredAccounts() {
 export async function checkThreadForReply({ fromEmail, threadId, recipientEmail }) {
   try {
     const account = getAccountByEmail(fromEmail);
-    const oauth2Client = getOAuth2Client(account.email, account.refreshToken);
-    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    // Use cached Gmail client (permanent optimization)
+    const gmail = getGmailClient(account.email, account.refreshToken);
 
     const thread = await gmail.users.threads.get({ userId: 'me', id: threadId, format: 'metadata', metadataHeaders: ['From','Auto-Submitted','Precedence'] });
     const messages = thread.data.messages || [];
@@ -234,8 +274,8 @@ export async function checkThreadForReply({ fromEmail, threadId, recipientEmail 
 
 export async function listNoReplyThreads({ fromEmail, days = 3 }) {
   const account = getAccountByEmail(fromEmail);
-  const oauth2Client = getOAuth2Client(account.email, account.refreshToken);
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  // Use cached Gmail client (permanent optimization)
+  const gmail = getGmailClient(account.email, account.refreshToken);
   const q = days <= 0 ? 'in:sent newer_than:1d' : `in:sent older_than:${days}d`;
   const now = new Date();
   const oneDayMs = 24 * 60 * 60 * 1000;
@@ -306,8 +346,8 @@ export async function listNoReplyThreads({ fromEmail, days = 3 }) {
 
 export async function getThreadSummary({ fromEmail, threadId }) {
   const account = getAccountByEmail(fromEmail);
-  const oauth2Client = getOAuth2Client(account.email, account.refreshToken);
-  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  // Use cached Gmail client (permanent optimization)
+  const gmail = getGmailClient(account.email, account.refreshToken);
   const thread = await gmail.users.threads.get({ userId: 'me', id: threadId, format: 'full' });
   const messages = thread.data.messages || [];
   const lines = [];

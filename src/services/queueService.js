@@ -218,7 +218,8 @@ export async function processOutboxOnce() {
       // Min interval check
       const minIntervalMs = limits.minIntervalMs;
       if (usage.lastSentAt && Date.now() - new Date(usage.lastSentAt).getTime() < minIntervalMs) {
-        const nextAt = addJitter(new Date(new Date(usage.lastSentAt).getTime() + minIntervalMs));
+        // Reschedule for exactly minIntervalMs later (no jitter to avoid unnecessary delays)
+        const nextAt = new Date(new Date(usage.lastSentAt).getTime() + minIntervalMs);
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
       }

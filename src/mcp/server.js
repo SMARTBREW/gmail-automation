@@ -18,7 +18,7 @@ import {
   getUnrepliedCampaigns,
   getTemplateForCampaign,
 } from '../services/campaignDbService.js';
-import { enqueueInitial, enqueueFollowup, processOutboxOnce } from '../services/queueService.js';
+import { enqueueInitial, enqueueFollowup, processOutboxOnce, cleanupOldBodies } from '../services/queueService.js';
 import { Outbox } from '../models/Outbox.js';
 import { AccountUsage } from '../models/AccountUsage.js';
 
@@ -336,3 +336,20 @@ setInterval(async () => {
     await processOutboxOnce();
   } catch {}
 }, OUTBOX_POLL_MS);
+
+// Background cleanup: remove HTML bodies from old outbox records (every 10 minutes)
+const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+setInterval(async () => {
+  try {
+    await cleanupOldBodies();
+  } catch (err) {
+    console.error('Error cleaning up old bodies:', err.message);
+  }
+}, CLEANUP_INTERVAL_MS);
+
+// Run cleanup once on startup after 1 minute
+setTimeout(async () => {
+  try {
+    await cleanupOldBodies();
+  } catch {}
+}, 60000);

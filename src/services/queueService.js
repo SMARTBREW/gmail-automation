@@ -158,6 +158,25 @@ export async function recoverStuckJobs() {
   );
 }
 
+// Clean up HTML bodies from outbox records older than 5 minutes (safety net for edge cases)
+// Note: Bodies are deleted immediately after sending, this is just a backup cleanup
+export async function cleanupOldBodies() {
+  const minutes = 5; // Remove bodies after 5 minutes (safety net)
+  const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+  const result = await Outbox.updateMany(
+    { 
+      createdAt: { $lte: cutoff },
+      body: { $exists: true, $ne: null },
+      status: { $ne: 'sending' } // Don't delete bodies from jobs currently being sent
+    },
+    { $unset: { body: '' } }
+  );
+  if (result.modifiedCount > 0) {
+    console.log(`🧹 Cleaned up ${result.modifiedCount} old outbox bodies (safety net)`);
+  }
+  return result.modifiedCount;
+}
+
 async function claimJobAtomically(now) {
   return await Outbox.findOneAndUpdate(
     { status: 'pending', notBefore: { $lte: now } },
@@ -209,6 +228,14 @@ export async function processOutboxOnce() {
       }
       const headers = job.headers || {};
       const res = await sendEmail(job.from, job.to, job.subject, job.body, headers);
+      
+      // Delete body IMMEDIATELY after successful send to save database space
+      // Do this first before other operations to ensure body is removed even if later steps fail
+      await Outbox.findByIdAndUpdate(job._id, { 
+        $set: { status: 'sent' }, 
+        $unset: { body: '' } 
+      });
+      
       // success: update usage
       usage.sentToday += 1;
       usage.lastSentAt = new Date();
@@ -239,8 +266,6 @@ export async function processOutboxOnce() {
           internetMessageId: res.internetMessageId,
         });
       }
-      // Delete body after sending to save database space
-      await Outbox.findByIdAndUpdate(job._id, { $set: { status: 'sent' }, $unset: { body: '' } });
       processed += 1;
     } catch (err) {
       const attempts = (job.attempts || 0) + 1;

@@ -246,13 +246,14 @@ export async function processOutboxOnce() {
       // campaign bookkeeping
       if (job.type === 'initial') {
         const displayName = getAccountDisplayName(job.from);
+        // Always pass recipientName (even if empty) to ensure it's saved for follow-ups
         await createCampaignRecord({
           campaignName: job.campaignRef?.campaignName,
           to: job.to,
           from: job.from,
           displayName,
           subject: job.campaignRef?.originalSubject || job.subject,
-          recipientName: job.campaignRef?.recipientName,
+          recipientName: job.campaignRef?.recipientName || '', // Ensure it's always passed
           threadId: res.threadId,
           messageId: res.messageId,
           internetMessageId: res.internetMessageId,

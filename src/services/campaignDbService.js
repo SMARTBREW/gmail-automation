@@ -18,13 +18,15 @@ export async function createCampaignRecord({
   messageId,
   internetMessageId,
 }) {
+  // Always save recipientName (even if empty) to ensure it's available for follow-ups
+  // Empty string is better than null/undefined for template replacement
   const doc = await Campaign.create({
     campaignName,
     to,
     from,
     displayName,
     subject,
-    recipientName,
+    recipientName: recipientName || '', // Ensure it's always a string
     touchpoint: 1,
     lastSent: new Date(),
     replied: false,
@@ -84,9 +86,7 @@ export async function advanceTouchpoint({ campaignId, newBody, newMessageId, thr
   const camp = await Campaign.findById(campaignId);
   if (!camp) throw new Error('Campaign not found');
   const nextTp = Math.min(7, (camp.touchpoint || 1) + 1);
-  const bodies = camp.generatedBodies || [];
-  bodies[nextTp] = newBody;
-  camp.generatedBodies = bodies;
+  // Don't store HTML bodies to save database space - they're not needed after sending
   camp.touchpoint = nextTp;
   camp.lastSent = new Date();
   if (newMessageId) camp.messageIds = [...(camp.messageIds || []), newMessageId];

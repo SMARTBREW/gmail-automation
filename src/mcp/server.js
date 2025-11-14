@@ -83,6 +83,8 @@ const tools = [
       for (const entry of contacts) {
         const to = typeof entry === 'string' ? entry : entry.email;
         const requestedFrom = typeof entry === 'string' ? undefined : entry.from;
+        // Extract recipientName from contact object if available
+        const recipientName = typeof entry === 'object' && entry.name ? entry.name : '';
         // Per-contact owner precedence → fallback to provided accountEmail → reject if unknown
         const from = requestedFrom || accountEmail;
         if (!from) {
@@ -93,8 +95,8 @@ const tools = [
           results.push({ to, status: 'failed', error: `Owner email not in config.json: ${from}` });
           continue;
         }
-        await enqueueInitial({ from, to, subject, body, campaignName });
-        results.push({ to, from, status: 'queued' });
+        await enqueueInitial({ from, to, subject, body, campaignName, recipientName });
+        results.push({ to, from, status: 'queued', recipientName: recipientName || 'not provided' });
       }
       return { queued: results.length, results };
     },

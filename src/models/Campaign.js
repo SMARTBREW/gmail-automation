@@ -17,7 +17,11 @@ const CampaignSchema = new mongoose.Schema(
     internetMessageId: { type: String },
     allInternetMessageIds: { type: [String], default: [] },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    strict: true, // Explicitly reject fields not in schema
+    strictQuery: true // Also reject in queries
+  }
 );
 
 export const Campaign = mongoose.models.Campaign || mongoose.model('Campaign', CampaignSchema);

@@ -94,11 +94,12 @@ function ensureWeekday(date) {
 
 function clampToAllowedWindow(date) {
   // If the time is outside the allowed daily window, move to the next start
+  // IMPORTANT: Use UTC hours to ensure consistent behavior regardless of server timezone
   const d = new Date(date);
   const start = new Date(d);
-  start.setHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
+  start.setUTCHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
   const end = new Date(d);
-  end.setHours(ALLOWED_WINDOW_END_HOUR, 0, 0, 0);
+  end.setUTCHours(ALLOWED_WINDOW_END_HOUR, 0, 0, 0);
   if (ALLOWED_WINDOW_END_HOUR <= ALLOWED_WINDOW_START_HOUR) {
     // safety: if misconfigured, don't clamp
     return d;
@@ -108,8 +109,8 @@ function clampToAllowedWindow(date) {
   }
   if (d >= end) {
     const next = new Date(d);
-    next.setDate(next.getDate() + 1);
-    next.setHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
+    next.setUTCDate(next.getUTCDate() + 1);
+    next.setUTCHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
     return next;
   }
   return d; // already within window

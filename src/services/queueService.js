@@ -275,12 +275,60 @@ export async function processOutboxOnce() {
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
       }
-      // Body is required for sending (but optional in schema after deletion)
-      if (!job.body) {
-        throw new Error(`Missing body for outbox job ${job._id}`);
+      // For follow-ups: check if replied BEFORE sending (not just when queuing)
+      if (job.type === 'followup' && job.campaignRef?.campaignId) {
+        const { checkThreadForReply } = await import('./gmailService.js');
+        const { Campaign } = await import('../models/Campaign.js');
+        const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
+        if (campaign) {
+          const hasReply = await checkThreadForReply({
+            fromEmail: job.from,
+            threadId: job.headers?.threadId || campaign.threadId,
+            recipientEmail: job.to,
+          });
+          if (hasReply) {
+            // Mark campaign as replied and skip sending
+            await Campaign.findByIdAndUpdate(job.campaignRef.campaignId, { replied: true });
+            await Outbox.findByIdAndUpdate(job._id, { 
+              $set: { status: 'sent' }, 
+              $unset: { body: '' } 
+            });
+            continue; // Skip this email - they already replied
+          }
+        }
+      }
+      
+      // Regenerate body from template if missing (for follow-ups that were queued without body)
+      let emailBody = job.body;
+      if (!emailBody && job.type === 'followup' && job.campaignRef?.campaignId) {
+        const { Campaign } = await import('../models/Campaign.js');
+        const { getTemplateForCampaign } = await import('./campaignDbService.js');
+        const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
+        if (campaign) {
+          const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
+          const tpl = await getTemplateForCampaign(campaign.campaignName);
+          const templateBody = tpl.templates[nextTouch];
+          if (templateBody) {
+            // Generate body like enqueue-followups.js does
+            const recipientName = campaign.recipientName || '';
+            emailBody = templateBody;
+            if (recipientName) {
+              emailBody = emailBody.replace(/{recipientName}/g, recipientName);
+            } else {
+              emailBody = emailBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+            }
+            const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
+            emailBody = emailBody.replace(/{senderName}/g, senderName);
+          }
+        }
+      }
+      
+      // Body is required for sending
+      if (!emailBody) {
+        throw new Error(`Missing body for outbox job ${job._id} and could not regenerate from template`);
       }
       const headers = job.headers || {};
-      const res = await sendEmail(job.from, job.to, job.subject, job.body, headers);
+      const res = await sendEmail(job.from, job.to, job.subject, emailBody, headers);
       
       // Update usage immediately (in memory) for next email's rate limit check
       // Use consistent timestamp (permanent optimization)
@@ -326,9 +374,10 @@ export async function processOutboxOnce() {
         });
       } else if (job.type === 'followup' && job.campaignRef?.campaignId) {
         // Don't await - let it run in background
+        // Note: newBody is not stored (saves DB space), but we pass it for logging if needed
         advanceTouchpoint({
           campaignId: job.campaignRef.campaignId,
-          newBody: job.body,
+          newBody: emailBody, // Use the regenerated body
           newMessageId: res.messageId,
           threadId: res.threadId,
           internetMessageId: res.internetMessageId,

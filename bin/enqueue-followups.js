@@ -21,13 +21,36 @@ async function main() {
 
   for (const c of ready) {
     try {
-      // Skip if replied
-      const replied = await checkThreadForReply({
-        fromEmail: c.from,
-        threadId: c.threadId,
-        recipientEmail: c.to,
-      });
-      if (replied) { skipped++; continue; }
+      // First check: Skip if campaign is already marked as replied in database
+      if (c.replied) {
+        skipped++;
+        console.log(`⏭️  ${c.to}: Already marked as replied in database`);
+        continue;
+      }
+      
+      // Second check: Verify with Gmail API (may fail silently, so database check is primary)
+      let hasReply = false;
+      try {
+        hasReply = await checkThreadForReply({
+          fromEmail: c.from,
+          threadId: c.threadId,
+          recipientEmail: c.to,
+        });
+        if (hasReply) {
+          // Mark in database and skip
+          const { Campaign } = await import('../models/Campaign.js');
+          await Campaign.findByIdAndUpdate(c._id, { replied: true });
+          skipped++;
+          console.log(`⏭️  ${c.to}: Found reply in thread, marked as replied`);
+          continue;
+        }
+      } catch (replyCheckError) {
+        // If reply check fails (OAuth error, API error, etc.), log it but continue
+        // The database check above is the primary safeguard
+        const errorMsg = replyCheckError.message || String(replyCheckError);
+        console.warn(`⚠️  ${c.to}: Could not verify reply status (${errorMsg}), proceeding with caution`);
+        // Continue - database check already passed, and we'll check again before sending
+      }
 
       const nextTouch = Math.min(7, (c.touchpoint || 1) + 1);
       const tpl = await getTemplateForCampaign(c.campaignName);

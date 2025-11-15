@@ -14,7 +14,8 @@
     "enqueue-followups": "node bin/enqueue-followups.js",
     "check-followups": "node scripts/check-followup-status.js",
     "test-tokens": "node scripts/test-oauth-tokens.js",
-    "diagnose-outbox": "node scripts/diagnose-outbox.js"
+    "diagnose-outbox": "node scripts/diagnose-outbox.js",
+    "cleanup-replied": "node scripts/cleanup-replied-campaigns.js"
   },
   "keywords": [
     "gmail",

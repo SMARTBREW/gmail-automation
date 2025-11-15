@@ -267,7 +267,15 @@ export async function checkThreadForReply({ fromEmail, threadId, recipientEmail 
     }
     return false;
   } catch (error) {
-    console.error('Error checking thread for reply:', error);
+    const errorMsg = error.message || String(error);
+    // If it's an OAuth2 error, log it clearly
+    if (errorMsg.includes('oauth2') || errorMsg.includes('token') || errorMsg.includes('400') || errorMsg.includes('Bad Request') || error?.response?.status === 400) {
+      console.error(`❌ OAuth2 token error for account ${fromEmail} when checking thread ${threadId}:`, errorMsg);
+      console.error(`   💡 This account may need a new refresh token. Run: npm run generate-token`);
+    } else {
+      console.error(`Error checking thread ${threadId} for reply from ${fromEmail}:`, errorMsg);
+    }
+    // Return false to assume no reply (safer than throwing)
     return false;
   }
 }

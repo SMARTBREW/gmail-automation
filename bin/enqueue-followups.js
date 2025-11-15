@@ -67,7 +67,14 @@ async function main() {
       console.log(`✅ queued TP${nextTouch} to ${c.to} from ${c.from}`);
     } catch (e) {
       errors++;
-      console.error(`❌ ${c.to}: ${e.message}`);
+      const errorMsg = e.message || String(e);
+      // Check if it's an OAuth2 error
+      if (errorMsg.includes('oauth2') || errorMsg.includes('token') || errorMsg.includes('400') || errorMsg.includes('Bad Request')) {
+        console.error(`❌ ${c.to} (from ${c.from}): OAuth2 token error - ${errorMsg}`);
+        console.error(`   💡 This account (${c.from}) may need a new refresh token. Run: npm run generate-token`);
+      } else {
+        console.error(`❌ ${c.to} (from ${c.from}): ${errorMsg}`);
+      }
     }
   }
   console.log(`\nSummary: queued=${queued}, skipped=${skipped}, errors=${errors}`);

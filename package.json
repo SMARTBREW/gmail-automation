@@ -11,7 +11,9 @@
     "test-campaign": "node test-campaign.js",
     "generate-token": "node generate-refresh-token.js",
     "load-batch": "node bin/load-initial-batch.js batches/initial-contacts.json --window 10:00-10:30",
-    "enqueue-followups": "node bin/enqueue-followups.js"
+    "enqueue-followups": "node bin/enqueue-followups.js",
+    "check-followups": "node scripts/check-followup-status.js",
+    "test-tokens": "node scripts/test-oauth-tokens.js"
   },
   "keywords": [
     "gmail",

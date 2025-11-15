@@ -25,10 +25,30 @@ async function testRefreshToken(email, refreshToken) {
     // Try to get an access token (this will trigger a refresh if needed)
     const accessToken = await oauth2Client.getAccessToken();
     
-    if (accessToken.token) {
-      return { valid: true, error: null };
-    } else {
+    if (!accessToken.token) {
       return { valid: false, error: 'No access token returned' };
+    }
+    
+    // Test actual Gmail API access (not just token refresh)
+    const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+    
+    // Try a simple API call to verify the token works with Gmail API
+    // This tests if the token has the required scopes
+    try {
+      await gmail.users.getProfile({ userId: 'me' });
+      return { valid: true, error: null, apiAccess: true };
+    } catch (apiError) {
+      // If API call fails, token might be missing scopes
+      const errorMsg = apiError.message || String(apiError);
+      if (errorMsg.includes('invalid_grant') || errorMsg.includes('401') || errorMsg.includes('403')) {
+        return { 
+          valid: false, 
+          error: `Token refresh works but Gmail API access failed: ${errorMsg}`,
+          details: apiError.response?.data || apiError
+        };
+      }
+      // Other API errors might be temporary
+      return { valid: true, error: null, apiAccess: false, apiWarning: errorMsg };
     }
   } catch (error) {
     return { 
@@ -68,7 +88,11 @@ async function main() {
     results.push({ email: account.email, ...result });
     
     if (result.valid) {
-      console.log(`  ✅ Valid token\n`);
+      if (result.apiAccess === false) {
+        console.log(`  ⚠️  Token valid but Gmail API access failed: ${result.apiWarning}\n`);
+      } else {
+        console.log(`  ✅ Valid token (Gmail API access confirmed)\n`);
+      }
     } else {
       console.log(`  ❌ Invalid token: ${result.error}\n`);
       if (result.details) {

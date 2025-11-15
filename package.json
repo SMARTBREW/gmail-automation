@@ -13,7 +13,8 @@
     "load-batch": "node bin/load-initial-batch.js batches/initial-contacts.json --window 10:00-10:30",
     "enqueue-followups": "node bin/enqueue-followups.js",
     "check-followups": "node scripts/check-followup-status.js",
-    "test-tokens": "node scripts/test-oauth-tokens.js"
+    "test-tokens": "node scripts/test-oauth-tokens.js",
+    "diagnose-outbox": "node scripts/diagnose-outbox.js"
   },
   "keywords": [
     "gmail",

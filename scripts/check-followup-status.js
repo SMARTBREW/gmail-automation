@@ -80,7 +80,7 @@ async function main() {
     
     // Check if enough time has passed for next touchpoint
     const schedule = {
-      1: [3, 4],   // After TP1 → TP2 in 3-4 days
+      1: [3, 3],   // After TP1 → TP2 in exactly 3 days
       2: [5, 6],   // After TP2 → TP3 in 5-6 days
       3: [7, 8],   // After TP3 → TP4 in 7-8 days
       4: [7, 8],   // After TP4 → TP5 in 7-8 days

@@ -47,7 +47,7 @@ export async function campaignsReadyForFollowup(testMode = false) {
   // User-defined outreach cadence (delay between previous touch and next)
   // Keys are CURRENT touchpoint; values are [minDays, maxDays] to wait before sending the NEXT touchpoint
   const productionScheduleDays = {
-    1: [3, 4],   // After initial (TP1) → TP2 in ~3 days
+    1: [3, 3],   // After initial (TP1) → TP2 exactly 3 days later
     2: [5, 6],   // TP3 ~5 days after TP2
     3: [7, 8],   // TP4 ~7 days after TP3
     4: [7, 8],   // TP5 ~7 days after TP4

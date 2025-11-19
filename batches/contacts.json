@@ -1,8 +1,20 @@
 [
   {
-    "name": "NK",
-    "email": "rrrajveer424@gmail.com",
-    "from": "ansh.work8019@gmail.com",
+    "name": "Anand",
+    "email": "technerdacademy111@gmail.com",
+    "from": "workwithayush2003@gmail.com",
+    "campaignName": "Wings of Hope"
+  },
+  {
+    "name": "lab",
+    "email": "ayush12395306@gmail.com",
+    "from": "workwithayush2003@gmail.com",
+    "campaignName": "Wings of Hope"
+  },
+  {
+    "name": "smart",
+    "email": "smartbrew11@gmail.com",
+    "from": "workwithayush2003@gmail.com",
     "campaignName": "Wings of Hope"
   }
 ]

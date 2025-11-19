@@ -22,169 +22,128 @@ try {
   }
 } catch {}
 
+const FACTS_LINE = 'Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products. This coupled by lack of awareness and prevailing taboos & restrictions is a <strong>FULL STOP</strong> to a girl\'s right to education & equality.';
+
+const aboutUsBlock = `<p><strong>About us</strong><br>
+Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
+<br>
+Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
+Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
+<a href="https://jwpindia.org">jwpindia.org</a></p>`;
+
+function makeFirstTouch({ futureLine, inviteLine, impactLine, ctaLine }) {
+  return (
+    `<p>Dear {recipientName},</p>
+<p>${FACTS_LINE}</p>
+<p>${futureLine}</p>
+<p>${inviteLine}</p>
+<p>${impactLine}</p>
+<p>${ctaLine}<br>
+<br>
+Sincere regards,<br>
+<strong>{senderName}</strong><br>
+Wings of Hope<br>
+Joint Women's Programme</p>` +
+    aboutUsBlock +
+    footerImageHtml
+  );
+}
+
 const firstTouchTemplates = {
-  1: `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products. This coupled by lack of awareness and prevailing taboos & restrictions is a <strong>FULL STOP</strong> to a girls right to education & equality.</p>
-<p>Now, imagine a future where no girl is held back from learning because of her period. At the Joint Women's Programme (JWP), we believe this future is within reach, and with your help, we can make it happen.</p>
-<p>As a passionate volunteer for the cause, I'd like to invite you on behalf of the <strong>Joint Women's Programme (JWP)</strong> to be an ambassador for the <strong>"Wings of Hope" campaign</strong>. Your voice will help us support school-going girls from underprivileged communities by providing them with <strong>sustainable, reusable cloth pads</strong> and provide essential <strong>menstrual and mental health counselling</strong>.</p>
-<p>Your leadership and influence will play a crucial role in spreading awareness and inspiring collective action. With your support, we can reach more communities, keep more girls in school, and help them thrive.</p>
-<p>Would you be open to a quick 5-minute call to explore how you could join as a Wings of Hope Ambassador?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1a': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? The combination of stigma, taboos, and unaffordable supplies still halts a girl's progress overnight.</p>
-<p>At the Joint Women's Programme (JWP), we’re showing that a different future is possible. Through <strong>Wings of Hope</strong>, we provide reusable cloth pads plus menstrual and mental health counselling so girls can stay in school.</p>
-<p>I’m reaching out as a volunteer to invite you to join us as a Wings of Hope Ambassador. Your support would help us reach more under-resourced classrooms with dignity kits and open conversation.</p>
-<p>Could we schedule a short 5-minute call to explore how you might lend your voice?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1b': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? It’s a heartbreaking, preventable barrier rooted in misinformation and limited resources.</p>
-<p>That’s why the Joint Women’s Programme (JWP) created <strong>Wings of Hope</strong>—a campaign that pairs reusable cloth pads with honest menstrual and mental health counselling.</p>
-<p>I’d be honoured to have you consider becoming a Wings of Hope Ambassador. Your leadership can help us reach more girls who are on the brink of leaving school.</p>
-<p>Would you be open to a quick 5-minute conversation to discuss this further?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1c': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? The moment a period starts, many girls are told to stay home—and eventually they never return to school.</p>
-<p>The Joint Women’s Programme (JWP) is working to change that through <strong>Wings of Hope</strong>: reusable cloth pad kits plus menstrual and mental wellbeing workshops in the schools that need them most.</p>
-<p>As a volunteer, I’m inviting you to join as a Wings of Hope Ambassador. Your support would keep more desks filled and futures on track.</p>
-<p>Could we chat for five minutes to explore how you might get involved?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1d': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? It’s an invisible crisis that keeps far too many young women from reaching their full potential.</p>
-<p>Our <strong>Wings of Hope</strong> campaign at the Joint Women's Programme (JWP) delivers reusable cloth pads along with menstrual and mental health counselling so girls can stay in school.</p>
-<p>I’d love to invite you to serve as a Wings of Hope Ambassador. Your voice can help us bring dignity kits and safe conversations to more campuses.</p>
-<p>Would you be open to a quick five-minute call to discuss the idea?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1e': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? The combination of silence, stigma, and limited resources keeps derailing girls who want nothing more than to keep learning.</p>
-<p>With <strong>Wings of Hope</strong>, the Joint Women’s Programme (JWP) is providing reusable cloth pads and supportive counselling in the very schools where dropouts are highest.</p>
-<p>I’m asking if you’d consider becoming a Wings of Hope Ambassador. Your involvement could help an entire cohort of students stay in class.</p>
-<p>Would you be available for a short five-minute conversation this week?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1f': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? One period can set off a chain reaction of missed school days and ultimately a permanent dropout.</p>
-<p>The Joint Women’s Programme’s <strong>Wings of Hope</strong> initiative equips girls with reusable cloth pads and mental health counselling so they can continue learning with confidence.</p>
-<p>May I invite you to become a Wings of Hope Ambassador? Your leadership can open doors for the schools we partner with.</p>
-<p>Let me know if we can grab a quick five-minute call to talk it through.<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1g': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? That translates to millions of lost dreams and futures every single year.</p>
-<p>Our <strong>Wings of Hope</strong> campaign at the Joint Women’s Programme (JWP) is committed to reversing this trend by providing reusable cloth pads and stigma-free counselling directly in schools.</p>
-<p>I’d love to have you on board as a Wings of Hope Ambassador. Together we can keep girls in classrooms where they belong.</p>
-<p>Would you be open to a short five-minute chat to explore the idea?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`,
-  '1h': `<p>Dear {recipientName},</p>
-<p>Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products? It's an urgent issue that demands simple, compassionate solutions.</p>
-<p>Through <strong>Wings of Hope</strong>, the Joint Women’s Programme (JWP) delivers reusable cloth pads and guided counselling so no girl has to sacrifice school when her period starts.</p>
-<p>I’m volunteering on this campaign and would be grateful if you’d consider joining as a Wings of Hope Ambassador. Your leadership can inspire more communities to take action.</p>
-<p>Can we find five minutes to talk about how you might help?<br>
-<br>
-Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Wings of Hope<br>
-Joint Women's Programme<br>
-<br>
-<strong>About us</strong><br>
-Established in 1977, Joint Women&#8203;'s Programme (JWP) is one of India's oldest national women's organisations, working for gender justice, social equity, and human rights. Through grassroots action and policy advocacy, JWP has empowered women and children across India and contributed to key reforms, including the Women's Reservation Act and Protection of Women from Domestic Violence Act.<br>
-<br>
-Recognised&#8203; by Hon'ble Former President Shri Ram Nath Kovind for our commitment to gender justice.<br>
-Certifications&#8203;: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
-<a href="https://jwpindia.org">jwpindia.org</a></p>`
+  1: makeFirstTouch({
+    futureLine:
+      'Now, imagine a future where no girl is held back from learning because of her period. At the Joint Women\'s Programme (JWP), we believe this future is within reach, and with your help, we can make it happen.',
+    inviteLine:
+      'As a passionate volunteer for the cause, I\'d like to invite you on behalf of the <strong>Joint Women\'s Programme (JWP)</strong> to be an ambassador for the <strong>"Wings of Hope" campaign</strong>. Your voice will help us support school-going girls from underprivileged communities by providing them with <strong>sustainable, reusable cloth pads</strong> and essential <strong>menstrual and mental health counselling</strong>.',
+    impactLine:
+      'Your leadership and influence will play a crucial role in spreading awareness and inspiring collective action. With your support, we can reach more communities, keep more girls in school, and help them thrive.',
+    ctaLine: 'Would you be open to a quick 5-minute call to explore how you could join as a Wings of Hope Ambassador?'
+  }),
+  '1a': makeFirstTouch({
+    futureLine:
+      'Now, imagine never having to tell a bright student to miss class because of her period—we believe that reality is possible and we\'re building it every day at JWP.',
+    inviteLine:
+      'On behalf of the <strong>Joint Women’s Programme</strong>, I’d love for you to step in as a <strong>Wings of Hope Ambassador</strong> so we can equip school-going girls with <strong>reusable cloth pads</strong> plus <strong>trusted menstrual and mental health counselling</strong>.',
+    impactLine:
+      'Your leadership can accelerate awareness, unlock new communities, and keep more girls engaged in their studies.',
+    ctaLine: 'Could we schedule a quick 5-minute chat to see how you might lend your voice?'
+  }),
+  '1b': makeFirstTouch({
+    futureLine:
+      'Now imagine a school day where periods never dictate who gets to learn—that’s the future we’re chasing with Wings of Hope.',
+    inviteLine:
+      'I’m reaching out from <strong>Joint Women’s Programme</strong> to invite you to champion <strong>"Wings of Hope"</strong>, where we pair <strong>reusable pad kits</strong> with open, stigma-free mentoring on menstrual and mental wellbeing.',
+    impactLine:
+      'With allies like you, we can reach more campuses, replace silence with knowledge, and keep promising students on track.',
+    ctaLine: 'May I request five minutes of your time to explore what this partnership could look like?'
+  }),
+  '1c': makeFirstTouch({
+    futureLine:
+      'Picture a classroom where every girl sits confidently through exams, regardless of her cycle—that vision is what drives us at JWP.',
+    inviteLine:
+      'As a volunteer, I’d be honoured if you’d become a <strong>Wings of Hope Ambassador</strong> so we can continue delivering <strong>sustainable cloth pads</strong> and empathetic counselling where dropout risk is highest.',
+    impactLine:
+      'Your support can keep desks filled, dreams intact, and conversations about menstrual health honest and hopeful.',
+    ctaLine: 'If this resonates, could we hop on a five-minute call to discuss next steps?'
+  }),
+  '1d': makeFirstTouch({
+    futureLine:
+      'Imagine a future in which every period is met with dignity, not a disrupted education—that’s the reality we’re working toward.',
+    inviteLine:
+      'Through <strong>"Wings of Hope"</strong>, JWP provides <strong>reusable cloth pads</strong> alongside practical menstrual and mental health guidance, and we’d be grateful to have you as an ambassador.',
+    impactLine:
+      'Your leadership can spark collective action, expanding our reach into new classrooms and communities.',
+    ctaLine: 'Would you be open to a five-minute conversation to explore supporting the campaign?'
+  }),
+  '1e': makeFirstTouch({
+    futureLine:
+      'Now, envision a world where girls never have to pause their ambitions because of a natural cycle—together we can build it.',
+    inviteLine:
+      'By joining <strong>Wings of Hope</strong> as an ambassador, you’ll help us deliver <strong>sustainable pad kits</strong> and compassionate menstrual & mental health workshops to the students who need them most.',
+    impactLine:
+      'With your encouragement, we can reach more districts, normalize health conversations, and keep girls focused on learning.',
+    ctaLine: 'Can we find five minutes to talk about how you might get involved?'
+  }),
+  '1f': makeFirstTouch({
+    futureLine:
+      'We can already see a horizon where periods never derail a promising academic year—and your voice could bring it closer.',
+    inviteLine:
+      'I’m inviting you to become a <strong>Wings of Hope Ambassador</strong> so we can keep providing <strong>reusable pad kits</strong> plus confidence-building counselling to girls on the brink of dropping out.',
+    impactLine:
+      'Your support will help us scale the initiative, protect learning time, and keep futures on track.',
+    ctaLine: 'Let me know if we can connect for five minutes to explore the fit.'
+  }),
+  '1g': makeFirstTouch({
+    futureLine:
+      'Now imagine every girl finishing school with her head held high, unbothered by stigma or scarcity—that’s the future we’re inviting you to shape.',
+    inviteLine:
+      'As an ambassador with <strong>Wings of Hope</strong>, you’d help us deliver <strong>reusable cloth pads</strong> plus stigma-busting mentoring inside the very classrooms where support is missing.',
+    impactLine:
+      'Your leadership can open doors, inspire allies, and ensure girls stay exactly where they belong—in school.',
+    ctaLine: 'Would you have five minutes for a quick call to explore the role?'
+  }),
+  '1h': makeFirstTouch({
+    futureLine:
+      'We know a world is possible where periods are treated like any other health topic—and girls never sacrifice education because of them.',
+    inviteLine:
+      'Joining <strong>Wings of Hope</strong> as an ambassador means helping us equip communities with <strong>reusable pads</strong> and thoughtful menstrual & mental health support.',
+    impactLine:
+      'Your voice can help us reach more schools, inspire collective action, and keep more girls thriving academically.',
+    ctaLine: 'Could we connect for a quick five-minute chat to see how you might help?'
+  }),
+  '1i': makeFirstTouch({
+    futureLine:
+      'Imagine every girl moving through school with confidence, regardless of her cycle—that belief sits at the heart of Wings of Hope.',
+    inviteLine:
+      'I’m reaching out via the <strong>Joint Women’s Programme</strong> to ask if you’d join as a <strong>Wings of Hope Ambassador</strong>. Together we deliver <strong>sustainable pad kits</strong> and open, empowering counselling.',
+    impactLine:
+      'Your leadership can keep this work expanding so more girls stay in classrooms, graduate, and lead.',
+    ctaLine: 'Would you be open to a short 5-minute call to discuss how you might champion the campaign?'
+  }),
 };
 
-const firstTouchEntries = Object.fromEntries(
-  Object.entries(firstTouchTemplates).map(([key, html]) => [key, html + footerImageHtml])
-);
-
 const templates = {
-  ...firstTouchEntries,
+  ...firstTouchTemplates,
   // Touchpoint 2: First followup email
   2: `<p>Dear {recipientName},</p>
 <p>I hope this message finds you well. Just checking in to see if you had a chance to look at my previous note on the <strong>"Wings of Hope" initiative</strong> by the Joint Women's Programme (JWP).</p>
@@ -294,9 +253,15 @@ Certifications: 12A | 80G | NGO Darpan | CSR | FCRA | CAF approved<br>
 
 const subjectLines = {
   1: 'Be a Voice for Change: Join Wings of Hope',
-  '1a': 'Keep girls in school: join Wings of Hope',
+  '1a': 'Keep girls in school with Wings of Hope',
   '1b': 'Help us stop 23M girls from dropping out',
   '1c': 'Can we chat about Wings of Hope?',
+  '1d': 'Your leadership can empower schoolgirls',
+  '1e': 'Stand with girls facing period poverty',
+  '1f': 'A quick way to support Wings of Hope',
+  '1g': 'Join our mission to end period poverty',
+  '1h': 'Let’s keep girls learning together',
+  '1i': 'Five minutes to champion Wings of Hope',
 };
 
 // Delete existing templates

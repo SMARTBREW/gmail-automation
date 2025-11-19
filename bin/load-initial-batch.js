@@ -60,6 +60,7 @@ async function main() {
   // Compute notBefore ONCE for all emails (unless window is specified)
   // This ensures all emails are queued with the same timestamp
   const baseNotBefore = windowSpec ? computeRandomNotBefore(windowSpec) : new Date();
+  const templateCache = new Map();
 
   for (const row of contacts) {
     try {
@@ -67,19 +68,31 @@ async function main() {
       if (!email || !from || !campaignName) throw new Error('Missing email/from/campaignName');
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
 
-      const campaignTemplate = await getTemplateForCampaign(campaignName);
-      const templatesMap =
-        campaignTemplate?.templates instanceof Map
-          ? Object.fromEntries(campaignTemplate.templates)
-          : campaignTemplate?.templates || {};
-      const subjectMap =
-        campaignTemplate?.subjectLines instanceof Map
-          ? Object.fromEntries(campaignTemplate.subjectLines)
-          : campaignTemplate?.subjectLines || {};
-      const firstTouchKeys = Object.keys(templatesMap).filter((key) => key.toLowerCase().startsWith('1'));
-      if (!firstTouchKeys.length) throw new Error('No touchpoint 1 templates configured');
+      let meta = templateCache.get(campaignName);
+      if (!meta) {
+        const campaignTemplate = await getTemplateForCampaign(campaignName);
+        const templatesMap =
+          campaignTemplate?.templates instanceof Map
+            ? Object.fromEntries(campaignTemplate.templates)
+            : campaignTemplate?.templates || {};
+        const subjectMap =
+          campaignTemplate?.subjectLines instanceof Map
+            ? Object.fromEntries(campaignTemplate.subjectLines)
+            : campaignTemplate?.subjectLines || {};
+        const firstTouchKeys = Object.keys(templatesMap)
+          .filter((key) => key.toLowerCase().startsWith('1'))
+          .sort();
+        if (!firstTouchKeys.length) throw new Error('No touchpoint 1 templates configured');
+        meta = {
+          templatesMap,
+          subjectMap,
+          firstTouchKeys,
+        };
+        templateCache.set(campaignName, meta);
+      }
+      const { templatesMap, subjectMap, firstTouchKeys } = meta;
       const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
-      const subject = subjectMap[chosenKey] ?? subjectMap['1'] ?? ' ';
+      const subject = subjectMap[chosenKey] ?? subjectMap[firstTouchKeys[0]] ?? ' ';
       let body = templatesMap[chosenKey];
 
       // Fill placeholders

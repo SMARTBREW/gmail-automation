@@ -67,10 +67,20 @@ async function main() {
       if (!email || !from || !campaignName) throw new Error('Missing email/from/campaignName');
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
 
-      const template = await getTemplateForCampaign(campaignName);
-      const subject = template.subjectLines?.['1'] || template.subjectLines?.[1] || ' ';
-      let body = template.templates?.['1'] || template.templates?.[1];
-      if (!body) throw new Error('Template body for touchpoint 1 not found');
+      const campaignTemplate = await getTemplateForCampaign(campaignName);
+      const templatesMap =
+        campaignTemplate?.templates instanceof Map
+          ? Object.fromEntries(campaignTemplate.templates)
+          : campaignTemplate?.templates || {};
+      const subjectMap =
+        campaignTemplate?.subjectLines instanceof Map
+          ? Object.fromEntries(campaignTemplate.subjectLines)
+          : campaignTemplate?.subjectLines || {};
+      const firstTouchKeys = Object.keys(templatesMap).filter((key) => key.toLowerCase().startsWith('1'));
+      if (!firstTouchKeys.length) throw new Error('No touchpoint 1 templates configured');
+      const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
+      const subject = subjectMap[chosenKey] ?? subjectMap['1'] ?? ' ';
+      let body = templatesMap[chosenKey];
 
       // Fill placeholders
       const senderName = getAccountDisplayName(from) || '';

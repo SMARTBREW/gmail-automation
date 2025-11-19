@@ -7,7 +7,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 const DAILY_CAP_DEFAULT = parseInt(process.env.DAILY_CAP || '400', 10);
-const MIN_INTERVAL_MS_DEFAULT = parseInt(process.env.MIN_INTERVAL_MS || '3000', 10);
+const MIN_INTERVAL_MS_DEFAULT = parseInt(process.env.MIN_INTERVAL_MS || '60000', 10);
 const RESET_HOUR_LOCAL_DEFAULT = parseInt(process.env.RESET_HOUR_LOCAL || '0', 10); // midnight by default
 const STUCK_JOB_MINUTES = parseInt(process.env.STUCK_JOB_MINUTES || '10', 10);
 const JITTER_PCT = parseFloat(process.env.JITTER_PCT || '0.1'); // 10%

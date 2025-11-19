@@ -332,7 +332,7 @@ process.stdin.on('end', () => process.exit(0));
 console.log('🧩 MCP stdio server ready');
 
 // Background worker: process outbox periodically
-// Default to 3000ms (3 seconds) to match minIntervalMs for faster processing
+// Poll outbox every 3 seconds to check for new jobs (sending respects minIntervalMs from config)
 const OUTBOX_POLL_MS = parseInt(process.env.OUTBOX_POLL_MS || '3000', 10);
 setInterval(async () => {
   try {

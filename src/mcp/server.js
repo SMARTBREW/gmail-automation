@@ -328,8 +328,20 @@ process.stdin.on('data', (chunk) => {
   }
 });
 
-process.stdin.on('end', () => process.exit(0));
-console.log('🧩 MCP stdio server ready');
+// Handle stdin close: only exit if we're in interactive MCP mode
+// When running as a background worker (PM2), stdin closes but we should keep the worker alive
+// PM2 runs processes without a TTY, so !isTTY means we're in worker mode
+const isWorkerMode = !process.stdin.isTTY || process.env.RUN_AS_WORKER === 'true';
+if (!isWorkerMode) {
+  // Only exit on stdin close if we're in interactive MCP protocol mode
+  process.stdin.on('end', () => process.exit(0));
+} else {
+  // In worker mode, ignore stdin close - keep the process alive
+  process.stdin.on('end', () => {
+    console.log('⚠️  stdin closed (worker mode - keeping process alive)');
+  });
+}
+console.log('🧩 MCP stdio server ready' + (isWorkerMode ? ' (worker mode)' : ' (MCP protocol mode)'));
 
 // Background worker: process outbox periodically
 // Poll outbox every 3 seconds to check for new jobs (sending respects minIntervalMs from config)

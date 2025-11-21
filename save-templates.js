@@ -2,25 +2,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { connectMongo } from './src/db/mongo.js';
 import { CampaignTemplate } from './src/models/CampaignTemplate.js';
-import { readFileSync, existsSync } from 'fs';
-import path from 'path';
-
 await connectMongo();
 
 const campaignName = 'Wings of Hope';
-
-// Optional image footer for first email (embedded as base64)
-let footerImageHtml = '';
-try {
-  const imgPath = path.resolve(process.cwd(), 'public', 'WoH 2.png');
-  if (existsSync(imgPath)) {
-    const b64 = readFileSync(imgPath).toString('base64');
-    footerImageHtml =
-      `<p style="margin:0;padding:0">` +
-      `<img src="data:image/png;base64,${b64}" alt="Wings of Hope" ` +
-      `style="max-width:600px;width:100%;height:auto;display:block;border:0;outline:none;text-decoration:none"/></p>`;
-  }
-} catch {}
 
 const FACTS_LINE = 'Did you know that each year, <strong>23 million girls in India</strong> are forced to abandon their education simply because they lack access to basic menstrual hygiene products. This coupled by lack of awareness and prevailing taboos & restrictions is a <strong>FULL STOP</strong> to a girl\'s right to education & equality.';
 
@@ -44,101 +28,70 @@ Sincere regards,<br>
 <strong>{senderName}</strong><br>
 Wings of Hope<br>
 Joint Women's Programme</p>` +
-    aboutUsBlock +
-    footerImageHtml
+    aboutUsBlock
   );
 }
 
 const firstTouchTemplates = {
   1: makeFirstTouch({
-    futureLine:
-      'Now, imagine a future where no girl is held back from learning because of her period. At the Joint Women\'s Programme (JWP), we believe this future is within reach, and with your help, we can make it happen.',
-    inviteLine:
-      'As a passionate volunteer for the cause, I\'d like to invite you on behalf of the <strong>Joint Women\'s Programme (JWP)</strong> to be an ambassador for the <strong>"Wings of Hope" campaign</strong>. Your voice will help us support school-going girls from underprivileged communities by providing them with <strong>sustainable, reusable cloth pads</strong> and essential <strong>menstrual and mental health counselling</strong>.',
-    impactLine:
-      'Your leadership and influence will play a crucial role in spreading awareness and inspiring collective action. With your support, we can reach more communities, keep more girls in school, and help them thrive.',
-    ctaLine: 'Would you be open to a quick 5-minute call to explore how you could join as a Wings of Hope Ambassador?'
+    futureLine: `Now, imagine a future where no girl is held back from learning because of her period. At the Joint Women's Programme (JWP), we believe this future is within reach, and with your help, we can make it happen.`,
+    inviteLine: `As a passionate volunteer for the cause, I'd like to invite you on behalf of the <strong>Joint Women's Programme (JWP)</strong> to be an ambassador for the <strong>"Wings of Hope" campaign</strong>. Your voice will help us support school-going girls from underprivileged communities by providing them with <strong>sustainable, reusable cloth pads</strong> and essential <strong>menstrual and mental health counselling</strong>.`,
+    impactLine: `Your leadership and influence will play a crucial role in spreading awareness and inspiring collective action. With your support, we can reach more communities, keep more girls in school, and help them thrive.`,
+    ctaLine: `Would you be open to a quick 5-minute call to explore how you could join as a Wings of Hope Ambassador?`
   }),
   '1a': makeFirstTouch({
-    futureLine:
-      'Now, imagine never having to tell a bright student to miss class because of her period—we believe that reality is possible and we\'re building it every day at JWP.',
-    inviteLine:
-      'On behalf of the <strong>Joint Women’s Programme</strong>, I’d love for you to step in as a <strong>Wings of Hope Ambassador</strong> so we can equip school-going girls with <strong>reusable cloth pads</strong> plus <strong>trusted menstrual and mental health counselling</strong>.',
-    impactLine:
-      'Your leadership can accelerate awareness, unlock new communities, and keep more girls engaged in their studies.',
-    ctaLine: 'Could we schedule a quick 5-minute chat to see how you might lend your voice?'
+    futureLine: `Picture a morning assembly where every student shows up confident instead of worrying about basic supplies, that steady calm is what Wings of Hope works toward daily.`,
+    inviteLine: `As volunteers with the <strong>Joint Women's Programme</strong>, we would love you to stand in as a <strong>Wings of Hope Ambassador</strong> so we can stock classrooms with <strong>reusable cloth pads</strong> plus <strong>trusted menstrual and mental health mentors</strong>.`,
+    impactLine: `Your credibility helps open school doors faster, keeps conversations respectful, and makes it easier for girls to keep notebooks, not excuses, in their bags.`,
+    ctaLine: `Would you have five minutes this week for a quick call to see how your voice could anchor the cause?`
   }),
   '1b': makeFirstTouch({
-    futureLine:
-      'Now imagine a school day where periods never dictate who gets to learn—that’s the future we’re chasing with Wings of Hope.',
-    inviteLine:
-      'I’m reaching out from <strong>Joint Women’s Programme</strong> to invite you to champion <strong>"Wings of Hope"</strong>, where we pair <strong>reusable pad kits</strong> with open, stigma-free mentoring on menstrual and mental wellbeing.',
-    impactLine:
-      'With allies like you, we can reach more campuses, replace silence with knowledge, and keep promising students on track.',
-    ctaLine: 'May I request five minutes of your time to explore what this partnership could look like?'
+    futureLine: `Imagine a science lab where curiosity, not stigma, drives questions, that is the picture students describe to us when they finally have the resources they need.`,
+    inviteLine: `I am reaching out from the <strong>Joint Women's Programme</strong> to invite you to champion <strong>"Wings of Hope"</strong>, pairing <strong>reusable pad kits</strong> with safe circles for menstrual and mental wellbeing.`,
+    impactLine: `Supporters like you turn whispered worries into open dialogue, helping us keep promising scholars steady through exams and internships alike.`,
+    ctaLine: `Could we find a quick five-minute slot to outline what partnering with you might unlock?`
   }),
   '1c': makeFirstTouch({
-    futureLine:
-      'Picture a classroom where every girl sits confidently through exams, regardless of her cycle—that vision is what drives us at JWP.',
-    inviteLine:
-      'As a volunteer, I’d be honoured if you’d become a <strong>Wings of Hope Ambassador</strong> so we can continue delivering <strong>sustainable cloth pads</strong> and empathetic counselling where dropout risk is highest.',
-    impactLine:
-      'Your support can keep desks filled, dreams intact, and conversations about menstrual health honest and hopeful.',
-    ctaLine: 'If this resonates, could we hop on a five-minute call to discuss next steps?'
+    futureLine: `Think of examination halls where attendance sheets no longer dip midweek, that steady participation is what keeps us motivated at JWP.`,
+    inviteLine: `As a fellow volunteer, I'd be honoured if you'd step in as a <strong>Wings of Hope Ambassador</strong> so we can continue delivering <strong>sustainable cloth pads</strong> plus empathetic counselling to the girls closest to dropping out.`,
+    impactLine: `Your support keeps desks filled, protects unbroken study schedules, and signals to communities that menstrual health deserves honest conversation.`,
+    ctaLine: `If that aligns with you, could we hop on a brief five-minute call to map the next step?`
   }),
   '1d': makeFirstTouch({
-    futureLine:
-      'Imagine a future in which every period is met with dignity, not a disrupted education—that’s the reality we’re working toward.',
-    inviteLine:
-      'Through <strong>"Wings of Hope"</strong>, JWP provides <strong>reusable cloth pads</strong> alongside practical menstrual and mental health guidance, and we’d be grateful to have you as an ambassador.',
-    impactLine:
-      'Your leadership can spark collective action, expanding our reach into new classrooms and communities.',
-    ctaLine: 'Would you be open to a five-minute conversation to explore supporting the campaign?'
+    futureLine: `Envision a future where periods are treated like any other health topic at parent-teacher meetings, that's the culture shift Wings of Hope pushes for.`,
+    inviteLine: `Through <strong>"Wings of Hope"</strong>, JWP delivers <strong>reusable cloth pads</strong> alongside practical menstrual and mental health coaching, and we would value your presence as an ambassador.`,
+    impactLine: `Your leadership sparks local champions, helping us expand into classrooms that have never hosted conversations like these.`,
+    ctaLine: `Would you be open to a focused five-minute chat to explore how you might guide the campaign?`
   }),
   '1e': makeFirstTouch({
-    futureLine:
-      'Now, envision a world where girls never have to pause their ambitions because of a natural cycle—together we can build it.',
-    inviteLine:
-      'By joining <strong>Wings of Hope</strong> as an ambassador, you’ll help us deliver <strong>sustainable pad kits</strong> and compassionate menstrual & mental health workshops to the students who need them most.',
-    impactLine:
-      'With your encouragement, we can reach more districts, normalize health conversations, and keep girls focused on learning.',
-    ctaLine: 'Can we find five minutes to talk about how you might get involved?'
+    futureLine: `Now, imagine a world where internship interviews and board exams are never skipped for lack of supplies, together we can lock that reality in place.`,
+    inviteLine: `By joining <strong>Wings of Hope</strong> as an ambassador, you'll help us deliver <strong>sustainable pad kits</strong> and compassionate menstrual & mental health workshops exactly where dropout risk spikes.`,
+    impactLine: `With your encouragement, new districts open their doors, conversations stay respectful, and students get to obsess over assignments, not scarcity.`,
+    ctaLine: `Can we schedule a five-minute conversation to see how you might plug in?`
   }),
   '1f': makeFirstTouch({
-    futureLine:
-      'We can already see a horizon where periods never derail a promising academic year—and your voice could bring it closer.',
-    inviteLine:
-      'I’m inviting you to become a <strong>Wings of Hope Ambassador</strong> so we can keep providing <strong>reusable pad kits</strong> plus confidence-building counselling to girls on the brink of dropping out.',
-    impactLine:
-      'Your support will help us scale the initiative, protect learning time, and keep futures on track.',
-    ctaLine: 'Let me know if we can connect for five minutes to explore the fit.'
+    futureLine: `We already see glimpses of semesters where attendance lines stay steady all year, and your voice could make that the norm rather than the exception.`,
+    inviteLine: `I'm inviting you to become a <strong>Wings of Hope Ambassador</strong> so we can keep supplying <strong>reusable pad kits</strong> plus confidence-building counselling to students standing on the edge of leaving school.`,
+    impactLine: `Your backing helps us scale quietly and responsibly, protecting study time and letting futures stay on track.`,
+    ctaLine: `Let me know if we can connect for five minutes to explore whether this aligns with you.`
   }),
   '1g': makeFirstTouch({
-    futureLine:
-      'Now imagine every girl finishing school with her head held high, unbothered by stigma or scarcity—that’s the future we’re inviting you to shape.',
-    inviteLine:
-      'As an ambassador with <strong>Wings of Hope</strong>, you’d help us deliver <strong>reusable cloth pads</strong> plus stigma-busting mentoring inside the very classrooms where support is missing.',
-    impactLine:
-      'Your leadership can open doors, inspire allies, and ensure girls stay exactly where they belong—in school.',
-    ctaLine: 'Would you have five minutes for a quick call to explore the role?'
+    futureLine: `Now imagine graduation days filled with students who never had to disappear midterm because of stigma, that is the finish line we're steering toward.`,
+    inviteLine: `As an ambassador with <strong>Wings of Hope</strong>, you'd help us deliver <strong>reusable cloth pads</strong> plus stigma-busting mentoring in the classrooms that have waited longest.`,
+    impactLine: `Your leadership opens doors, inspires local allies, and keeps girls exactly where they belong, in school and in leadership roles.`,
+    ctaLine: `Would you have five minutes for a quick call to see if this role suits you?`
   }),
   '1h': makeFirstTouch({
-    futureLine:
-      'We know a world is possible where periods are treated like any other health topic—and girls never sacrifice education because of them.',
-    inviteLine:
-      'Joining <strong>Wings of Hope</strong> as an ambassador means helping us equip communities with <strong>reusable pads</strong> and thoughtful menstrual & mental health support.',
-    impactLine:
-      'Your voice can help us reach more schools, inspire collective action, and keep more girls thriving academically.',
-    ctaLine: 'Could we connect for a quick five-minute chat to see how you might help?'
+    futureLine: `We know a world is possible where health classes treat periods with the same clarity as nutrition, and no girl feels the need to step back from learning.`,
+    inviteLine: `Joining <strong>Wings of Hope</strong> as an ambassador means helping us equip communities with <strong>reusable pads</strong> and thoughtful menstrual & mental health support that teachers can rely on.`,
+    impactLine: `Your voice helps us reach more schools, inspires collective action, and keeps more girls thriving academically and emotionally.`,
+    ctaLine: `Could we connect for a five-minute chat to explore how you'd like to help?`
   }),
   '1i': makeFirstTouch({
-    futureLine:
-      'Imagine every girl moving through school with confidence, regardless of her cycle—that belief sits at the heart of Wings of Hope.',
-    inviteLine:
-      'I’m reaching out via the <strong>Joint Women’s Programme</strong> to ask if you’d join as a <strong>Wings of Hope Ambassador</strong>. Together we deliver <strong>sustainable pad kits</strong> and open, empowering counselling.',
-    impactLine:
-      'Your leadership can keep this work expanding so more girls stay in classrooms, graduate, and lead.',
-    ctaLine: 'Would you be open to a short 5-minute call to discuss how you might champion the campaign?'
+    futureLine: `Imagine every girl moving through semester after semester with calm confidence, regardless of her cycle, that belief sits at the heart of Wings of Hope.`,
+    inviteLine: `I'm reaching out through the <strong>Joint Women's Programme</strong> to ask if you'd join as a <strong>Wings of Hope Ambassador</strong>. Together we deliver <strong>sustainable pad kits</strong> alongside open, empowering counselling circles.`,
+    impactLine: `Your leadership keeps momentum high so more girls stay in classrooms, graduate on time, and step into leadership themselves.`,
+    ctaLine: `Would you be open to a short five-minute call to discuss how you might champion this effort?`
   }),
 };
 
@@ -260,7 +213,7 @@ const subjectLines = {
   '1e': 'Stand with girls facing period poverty',
   '1f': 'A quick way to support Wings of Hope',
   '1g': 'Join our mission to end period poverty',
-  '1h': 'Let’s keep girls learning together',
+  '1h': "Let's keep girls learning together",
   '1i': 'Five minutes to champion Wings of Hope',
 };
 

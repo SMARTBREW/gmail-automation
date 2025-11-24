@@ -309,27 +309,59 @@ export async function processOutboxOnce() {
         }
       }
       
-      // Regenerate body from template if missing (for follow-ups that were queued without body)
+      // Regenerate body from template if missing (for both initial and follow-up emails)
       let emailBody = job.body;
-      if (!emailBody && job.type === 'followup' && job.campaignRef?.campaignId) {
-        const { Campaign } = await import('../models/Campaign.js');
+      if (!emailBody && job.campaignRef?.campaignName) {
         const { getTemplateForCampaign } = await import('./campaignDbService.js');
-        const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
-        if (campaign) {
-          const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
-          const tpl = await getTemplateForCampaign(campaign.campaignName);
-          const templateBody = tpl.templates[nextTouch];
-          if (templateBody) {
-            // Generate body like enqueue-followups.js does
-            const recipientName = campaign.recipientName || '';
-            emailBody = templateBody;
-            if (recipientName) {
-              emailBody = emailBody.replace(/{recipientName}/g, recipientName);
-            } else {
-              emailBody = emailBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+        const tpl = await getTemplateForCampaign(job.campaignRef.campaignName);
+        
+        if (job.type === 'initial') {
+          // For initial emails, use touchpoint 1 (randomly select from variants 1, 1a-1i)
+          const templatesMap = tpl.templates instanceof Map 
+            ? Object.fromEntries(tpl.templates) 
+            : tpl.templates || {};
+          const firstTouchKeys = Object.keys(templatesMap)
+            .filter((key) => key.toString().toLowerCase().startsWith('1'))
+            .sort();
+          
+          if (firstTouchKeys.length > 0) {
+            // Use the first variant as default (or could randomize)
+            const chosenKey = firstTouchKeys[0];
+            const templateBody = templatesMap[chosenKey];
+            if (templateBody) {
+              const recipientName = job.campaignRef?.recipientName || '';
+              emailBody = templateBody;
+              if (recipientName) {
+                emailBody = emailBody.replace(/{recipientName}/g, recipientName);
+              } else {
+                emailBody = emailBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+              }
+              const senderName = getAccountDisplayName(job.from) || '';
+              emailBody = emailBody.replace(/{senderName}/g, senderName);
             }
-            const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
-            emailBody = emailBody.replace(/{senderName}/g, senderName);
+          }
+        } else if (job.type === 'followup' && job.campaignRef?.campaignId) {
+          // For follow-ups, use the campaign's current touchpoint
+          const { Campaign } = await import('../models/Campaign.js');
+          const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
+          if (campaign) {
+            const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
+            const templatesMap = tpl.templates instanceof Map 
+              ? Object.fromEntries(tpl.templates) 
+              : tpl.templates || {};
+            const templateBody = templatesMap[nextTouch];
+            if (templateBody) {
+              // Generate body like enqueue-followups.js does
+              const recipientName = campaign.recipientName || '';
+              emailBody = templateBody;
+              if (recipientName) {
+                emailBody = emailBody.replace(/{recipientName}/g, recipientName);
+              } else {
+                emailBody = emailBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+              }
+              const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
+              emailBody = emailBody.replace(/{senderName}/g, senderName);
+            }
           }
         }
       }

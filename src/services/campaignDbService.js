@@ -46,13 +46,15 @@ export async function campaignsReadyForFollowup(testMode = false) {
   const now = Date.now();
   // User-defined outreach cadence (delay between previous touch and next)
   // Keys are CURRENT touchpoint; values are [minDays, maxDays] to wait before sending the NEXT touchpoint
+  // Extended windows (2+ days) ensure campaigns that can't send due to daily limits remain eligible
+  // Only campaigns within the window (minDays to maxDays) are considered ready
   const productionScheduleDays = {
-    1: [3, 3],   // After initial (TP1) → TP2 exactly 3 days later
-    2: [5, 6],   // TP3 ~5 days after TP2
-    3: [7, 8],   // TP4 ~7 days after TP3
-    4: [7, 8],   // TP5 ~7 days after TP4
-    5: [10, 12], // TP6 ~10 days after TP5
-    6: [10, 14], // TP7 ~10–14 days after TP6
+    1: [3, 5],   // After initial (TP1) → TP2 between 3-5 days later (2-day window)
+    2: [5, 7],   // TP2 → TP3 between 5-7 days later (2-day window)
+    3: [7, 9],   // TP3 → TP4 between 7-9 days later (2-day window)
+    4: [7, 9],   // TP4 → TP5 between 7-9 days later (2-day window)
+    5: [10, 13], // TP5 → TP6 between 10-13 days later (3-day window)
+    6: [10, 15], // TP6 → TP7 between 10-15 days later (5-day window)
   };
   // Test mode uses minutes with the same shape, for fast QA
   const testScheduleMinutes = {
@@ -78,6 +80,8 @@ export async function campaignsReadyForFollowup(testMode = false) {
     const maxMs = testMode ? maxDelay * 60 * 1000 : maxDelay * 24 * 60 * 60 * 1000;
 
     const diff = now - new Date(campaign.lastSent).getTime();
+    // Strict window check: only consider campaigns within the proper window (minDays to maxDays)
+    // Overdue campaigns (older than maxDays) will NOT be queued
     return diff >= minMs && diff <= maxMs;
   });
 }

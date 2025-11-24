@@ -83,6 +83,15 @@ function addJitter(date, pct = JITTER_PCT) {
   return new Date(ms + delta);
 }
 
+function addIntervalJitter(baseIntervalMs) {
+  // Randomize interval: between a few seconds (10s) and up to 2 minutes (120000ms)
+  // This prevents emails from sending at exactly the same interval
+  const minIntervalMs = 10000; // 10 seconds minimum
+  const maxIntervalMs = 120000; // 2 minutes maximum
+  // Return random interval between min and max
+  return Math.floor(Math.random() * (maxIntervalMs - minIntervalMs + 1)) + minIntervalMs;
+}
+
 function ensureWeekday(date) {
   if (!SKIP_WEEKENDS) return date;
   const d = new Date(date);
@@ -270,8 +279,10 @@ export async function processOutboxOnce() {
       // Min interval check - use consistent timestamp (permanent optimization)
       const minIntervalMs = limits.minIntervalMs;
       if (usage.lastSentAt && nowMs - new Date(usage.lastSentAt).getTime() < minIntervalMs) {
-        // Reschedule for exactly minIntervalMs later (no jitter to avoid unnecessary delays)
-        const nextAt = new Date(new Date(usage.lastSentAt).getTime() + minIntervalMs);
+        // Reschedule with random jitter: between 10 seconds and 2 minutes from now
+        // This prevents emails from sending at exactly the same interval
+        const intervalWithJitter = addIntervalJitter(minIntervalMs);
+        const nextAt = new Date(nowMs + intervalWithJitter);
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
       }

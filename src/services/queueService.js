@@ -196,6 +196,7 @@ export async function recoverStuckJobs() {
 
 // Clean up HTML bodies from outbox records older than 5 minutes (safety net for edge cases)
 // Note: Bodies are deleted immediately after sending, this is just a backup cleanup
+// IMPORTANT: Never remove bodies from pending emails - they may need to be retried!
 export async function cleanupOldBodies() {
   const minutes = 5; // Remove bodies after 5 minutes (safety net)
   const cutoff = new Date(Date.now() - minutes * 60 * 1000);
@@ -203,7 +204,7 @@ export async function cleanupOldBodies() {
     { 
       createdAt: { $lte: cutoff },
       body: { $exists: true, $ne: null },
-      status: { $ne: 'sending' } // Don't delete bodies from jobs currently being sent
+      status: { $in: ['sent', 'failed'] } // Only remove bodies from sent/failed emails, NEVER from pending
     },
     { $unset: { body: '' } }
   );
@@ -325,8 +326,8 @@ export async function processOutboxOnce() {
             .sort();
           
           if (firstTouchKeys.length > 0) {
-            // Use the first variant as default (or could randomize)
-            const chosenKey = firstTouchKeys[0];
+            // Randomly select a variant (same as batch script)
+            const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
             const templateBody = templatesMap[chosenKey];
             if (templateBody) {
               const recipientName = job.campaignRef?.recipientName || '';
@@ -338,6 +339,12 @@ export async function processOutboxOnce() {
               }
               const senderName = getAccountDisplayName(job.from) || '';
               emailBody = emailBody.replace(/{senderName}/g, senderName);
+              
+              // CRITICAL: Save the regenerated body back to the database so it doesn't need to be regenerated again
+              await Outbox.findByIdAndUpdate(job._id, { 
+                $set: { body: emailBody },
+                $unset: { lastError: '' }
+              });
             }
           }
         } else if (job.type === 'followup' && job.campaignRef?.campaignId) {
@@ -361,6 +368,12 @@ export async function processOutboxOnce() {
               }
               const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
               emailBody = emailBody.replace(/{senderName}/g, senderName);
+              
+              // CRITICAL: Save the regenerated body back to the database so it doesn't need to be regenerated again
+              await Outbox.findByIdAndUpdate(job._id, { 
+                $set: { body: emailBody },
+                $unset: { lastError: '' }
+              });
             }
           }
         }

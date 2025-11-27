@@ -64,9 +64,12 @@ async function main() {
 
   for (const row of contacts) {
     try {
-      const { email, name = '', from, campaignName } = row || {};
+      const { email, name = '', recipientName = '', from, campaignName } = row || {};
       if (!email || !from || !campaignName) throw new Error('Missing email/from/campaignName');
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
+
+      // Use recipientName if provided, otherwise fall back to name
+      const finalRecipientName = recipientName || name;
 
       let meta = templateCache.get(campaignName);
       if (!meta) {
@@ -97,8 +100,8 @@ async function main() {
 
       // Fill placeholders
       const senderName = getAccountDisplayName(from) || '';
-      if (name) {
-        body = body.replace(/{recipientName}/g, name);
+      if (finalRecipientName) {
+        body = body.replace(/{recipientName}/g, finalRecipientName);
       } else {
         body = body.replace(/Dear {recipientName},/g, 'Hello,');
         body = body.replace(/{recipientName}/g, '');
@@ -107,7 +110,7 @@ async function main() {
 
       // Use the same notBefore for all emails (unless window is specified)
       const notBefore = windowSpec ? computeRandomNotBefore(windowSpec) : baseNotBefore;
-      await enqueueInitial({ from, to: email, subject, body, campaignName, recipientName: name, notBefore });
+      await enqueueInitial({ from, to: email, subject, body, campaignName, recipientName: finalRecipientName, notBefore });
       queued++;
       console.log(`✅ queued: ${email} from ${from} at ~${notBefore.toLocaleTimeString()}`);
     } catch (e) {

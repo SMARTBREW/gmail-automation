@@ -147,6 +147,10 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, re
         status: 'pending',
         idempotencyKey,
       },
+      // Also update recipientName if document already exists (in case it was queued without a name before)
+      $set: {
+        'campaignRef.recipientName': recipientName,
+      },
     },
     { upsert: true }
   );

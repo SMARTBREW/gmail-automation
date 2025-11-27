@@ -194,12 +194,13 @@ export async function recoverStuckJobs() {
   );
 }
 
-// Clean up HTML bodies from outbox records older than 5 minutes (safety net for edge cases)
+// Clean up HTML bodies from outbox records older than 12 hours (safety net for edge cases)
 // Note: Bodies are deleted immediately after sending, this is just a backup cleanup
 // IMPORTANT: Never remove bodies from pending emails - they may need to be retried!
+// Using 12 hours ensures bodies stay available even with jitter/rate limiting delays
 export async function cleanupOldBodies() {
-  const minutes = 5; // Remove bodies after 5 minutes (safety net)
-  const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+  const hours = 12; // Remove bodies after 12 hours (safety net - gives plenty of time for jitter/rate limiting)
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
   const result = await Outbox.updateMany(
     { 
       createdAt: { $lte: cutoff },
@@ -209,7 +210,7 @@ export async function cleanupOldBodies() {
     { $unset: { body: '' } }
   );
   if (result.modifiedCount > 0) {
-    console.log(`🧹 Cleaned up ${result.modifiedCount} old outbox bodies (safety net)`);
+    console.log(`🧹 Cleaned up ${result.modifiedCount} old outbox bodies (safety net - 12hr threshold)`);
   }
   return result.modifiedCount;
 }

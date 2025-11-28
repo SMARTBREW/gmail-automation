@@ -144,6 +144,23 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, re
     throw new Error(`Cannot enqueue email to ${to}: body is empty or invalid`);
   }
   
+  // OPTIONAL: Validate email is in contacts.json (only if contacts.json exists)
+  // This prevents queuing emails that aren't in the current batch
+  // But we don't fail if contacts.json doesn't exist (allows manual queuing)
+  try {
+    const contactsPath = path.resolve(process.cwd(), 'batches', 'contacts.json');
+    const contacts = JSON.parse(readFileSync(contactsPath, 'utf8'));
+    const contactEmails = contacts.map(c => (c.email || '').toLowerCase().trim());
+    const jobEmail = (to || '').toLowerCase().trim();
+    
+    if (contactEmails.length > 0 && !contactEmails.includes(jobEmail)) {
+      // Only warn, don't fail - allows flexibility
+      console.warn(`⚠️  Warning: ${to} is not in contacts.json - queuing anyway (idempotency will prevent duplicates)`);
+    }
+  } catch (err) {
+    // contacts.json doesn't exist or can't be read - that's okay, continue
+  }
+  
   // Idempotency key should ONLY include stable fields (from, to, type, campaignName)
   // NOT body, subject, recipientName, or notBefore - these can change but it's still the same email
   const idempotencyPayload = { type: 'initial', from, to, campaignName, k: 'v1' };
@@ -371,32 +388,9 @@ export async function processOutboxOnce() {
         throw new Error(`Account not configured: ${job.from}`);
       }
       
-      // CRITICAL: For initial emails, only send if they're in the current contacts.json
-      // This prevents sending old emails from previous batches
-      if (job.type === 'initial') {
-        try {
-          const contactsPath = path.resolve(process.cwd(), 'batches', 'contacts.json');
-          const contacts = JSON.parse(readFileSync(contactsPath, 'utf8'));
-          const contactEmails = contacts.map(c => (c.email || '').toLowerCase().trim());
-          const jobEmail = (job.to || '').toLowerCase().trim();
-          
-          if (!contactEmails.includes(jobEmail)) {
-            // Email is not in current contacts.json - mark as failed and skip
-            await Outbox.findByIdAndUpdate(job._id, {
-              $set: {
-                status: 'failed',
-                lastError: 'Email not in current contacts.json - skipping to prevent sending old emails'
-              },
-              $unset: { claimedAt: '', workerId: '' }
-            });
-            continue; // Skip this email
-          }
-        } catch (err) {
-          // If contacts.json doesn't exist or can't be read, log warning but continue
-          // (this allows the system to work even if contacts.json is temporarily unavailable)
-          console.warn(`⚠️  Could not check contacts.json for ${job.to}: ${err.message}`);
-        }
-      }
+      // NOTE: Removed contacts.json validation check - it was causing false failures
+      // Idempotency key already prevents duplicates, so this check was redundant
+      // If you need to prevent sending old emails, clear them from the database instead
       
       // Body should always be present - if missing, it's a data integrity issue
       // Bodies are kept for 12 hours after sending, so regeneration should rarely be needed

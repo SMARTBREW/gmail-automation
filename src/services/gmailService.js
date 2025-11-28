@@ -7,15 +7,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Cache OAuth2 clients and Gmail API clients per account (permanent optimization)
-const oauth2ClientCache = new Map(); // email -> OAuth2Client
-const gmailClientCache = new Map(); // email -> Gmail API client
+// Store both client and refreshToken to detect when token changes
+const oauth2ClientCache = new Map(); // email -> { client: OAuth2Client, refreshToken: string }
+const gmailClientCache = new Map(); // email -> { client: Gmail API client, refreshToken: string }
 
 function getOAuth2Client(email, refreshToken) {
-  // Return cached client if available
-  if (oauth2ClientCache.has(email)) {
-    return oauth2ClientCache.get(email);
+  // Check if cached client exists and token matches
+  const cached = oauth2ClientCache.get(email);
+  if (cached && cached.refreshToken === refreshToken) {
+    return cached.client;
   }
-  // Create new client and cache it
+  // Create new client and cache it with the token
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -24,19 +26,20 @@ function getOAuth2Client(email, refreshToken) {
   oauth2Client.setCredentials({
     refresh_token: refreshToken,
   });
-  oauth2ClientCache.set(email, oauth2Client);
+  oauth2ClientCache.set(email, { client: oauth2Client, refreshToken });
   return oauth2Client;
 }
 
 function getGmailClient(email, refreshToken) {
-  // Return cached Gmail client if available
-  if (gmailClientCache.has(email)) {
-    return gmailClientCache.get(email);
+  // Check if cached client exists and token matches
+  const cached = gmailClientCache.get(email);
+  if (cached && cached.refreshToken === refreshToken) {
+    return cached.client;
   }
-  // Create new Gmail client and cache it (reuses OAuth2 client)
+  // Create new Gmail client and cache it with the token (reuses OAuth2 client)
   const oauth2Client = getOAuth2Client(email, refreshToken);
   const gmailClient = google.gmail({ version: 'v1', auth: oauth2Client });
-  gmailClientCache.set(email, gmailClient);
+  gmailClientCache.set(email, { client: gmailClient, refreshToken });
   return gmailClient;
 }
 

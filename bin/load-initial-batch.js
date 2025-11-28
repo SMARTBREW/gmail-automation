@@ -69,8 +69,10 @@ async function main() {
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
 
       // Use recipientName if provided, otherwise fall back to name
+      // New format: recipientName is just the name (e.g., "Aastha Sharma")
+      // Old format: recipientName might be "Name, Dear Name" - extract just the name part
       let finalRecipientName = recipientName || name;
-      // Extract just the name part if recipientName contains comma (format: "Name, Dear Name")
+      // Extract just the name part if recipientName contains comma (old format: "Name, Dear Name")
       if (finalRecipientName && finalRecipientName.includes(',')) {
         finalRecipientName = finalRecipientName.split(',')[0].trim();
       }

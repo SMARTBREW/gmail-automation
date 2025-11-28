@@ -16,10 +16,13 @@ async function main() {
 
   await connectMongo();
 
-  // Remove body from all outbox records older than X minutes (regardless of status)
+  // Remove body from all outbox records older than X minutes
+  // CRITICAL: NEVER delete bodies from pending emails - they may need to be retried!
+  // Only delete from sent/failed emails that are old enough
   const query = {
     createdAt: { $lte: cutoff },
-    body: { $exists: true, $ne: null }
+    body: { $exists: true, $ne: null },
+    status: { $in: ['sent', 'failed'] } // NEVER delete from pending emails!
   };
 
   const count = await Outbox.countDocuments(query);

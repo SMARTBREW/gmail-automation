@@ -170,58 +170,84 @@ async function ensureCorrectSendAsDefault(gmail, targetEmail) {
 }
 
 export async function sendEmail(from, to, subject, body, options = {}) {
-  try {
-    const account = getAccountByEmail(from);
-    const actualFromEmail = account.email;
-    if (from.toLowerCase() !== actualFromEmail.toLowerCase()) {
-      console.warn(` Warning: 'from' parameter (${from}) doesn't match account email (${actualFromEmail}). Using account email from config.json.`);
-    }
-    // Use cached Gmail client (permanent optimization - avoids recreating on every email)
-    const gmail = getGmailClient(actualFromEmail, account.refreshToken);
-    await ensureCorrectSendAsDefault(gmail, actualFromEmail);
-    const rawMessage = createEmailMessage(actualFromEmail, to, subject, body, {
-      inReplyTo: options.inReplyTo,
-      references: options.references,
-      displayName: getAccountDisplayName(actualFromEmail),
-    });
-
-    const response = await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: rawMessage,
-        ...(options.threadId ? { threadId: options.threadId } : {}),
-      },
-    });
-
-    // Fetch internetMessageId for threading (required for follow-ups)
-    // This is fast - just one metadata API call
-    let internetMessageId = null;
-    try {
-      const sentMessage = await gmail.users.messages.get({
-        userId: 'me',
-        id: response.data.id,
-        format: 'metadata',
-        metadataHeaders: ['Message-Id', 'Message-ID'],
-      });
-      const headers = Object.fromEntries(
-        (sentMessage.data.payload?.headers || []).map(h => [h.name, h.value])
-      );
-      const msgIdRaw = headers['Message-Id'] || headers['Message-ID'] || '';
-      internetMessageId = msgIdRaw && !/^<.*>$/.test(msgIdRaw) ? `<${msgIdRaw}>` : msgIdRaw;
-    } catch (e) {
-      // If we can't get Message-ID, continue anyway - threading might still work with threadId
-      console.warn(`Could not fetch Message-ID for ${response.data.id}: ${e.message}`);
-    }
-
-    return {
-      success: true,
-      messageId: response.data.id,
-      threadId: response.data.threadId,
-      internetMessageId,
-    };
-  } catch (error) {
-    throw new Error(`Failed to send email: ${error.message}`);
+  const account = getAccountByEmail(from);
+  const actualFromEmail = account.email;
+  if (from.toLowerCase() !== actualFromEmail.toLowerCase()) {
+    console.warn(` Warning: 'from' parameter (${from}) doesn't match account email (${actualFromEmail}). Using account email from config.json.`);
   }
+  
+  // Retry logic for invalid_grant errors - clear cache and retry
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      // Clear cache if this is a retry (invalid_grant means token issue)
+      if (attempt > 0) {
+        oauth2ClientCache.delete(actualFromEmail);
+        gmailClientCache.delete(actualFromEmail);
+        console.log(`🔄 Retry ${attempt}: Cleared OAuth cache for ${actualFromEmail}`);
+        // Small delay before retry
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+      
+      // Get fresh Gmail client (will create new one if cache was cleared)
+      const gmail = getGmailClient(actualFromEmail, account.refreshToken);
+      await ensureCorrectSendAsDefault(gmail, actualFromEmail);
+      const rawMessage = createEmailMessage(actualFromEmail, to, subject, body, {
+        inReplyTo: options.inReplyTo,
+        references: options.references,
+        displayName: getAccountDisplayName(actualFromEmail),
+      });
+
+      const response = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: rawMessage,
+          ...(options.threadId ? { threadId: options.threadId } : {}),
+        },
+      });
+
+      // Fetch internetMessageId for threading (required for follow-ups)
+      // This is fast - just one metadata API call
+      let internetMessageId = null;
+      try {
+        const sentMessage = await gmail.users.messages.get({
+          userId: 'me',
+          id: response.data.id,
+          format: 'metadata',
+          metadataHeaders: ['Message-Id', 'Message-ID'],
+        });
+        const headers = Object.fromEntries(
+          (sentMessage.data.payload?.headers || []).map(h => [h.name, h.value])
+        );
+        const msgIdRaw = headers['Message-Id'] || headers['Message-ID'] || '';
+        internetMessageId = msgIdRaw && !/^<.*>$/.test(msgIdRaw) ? `<${msgIdRaw}>` : msgIdRaw;
+      } catch (e) {
+        // If we can't get Message-ID, continue anyway - threading might still work with threadId
+        console.warn(`Could not fetch Message-ID for ${response.data.id}: ${e.message}`);
+      }
+
+      return {
+        success: true,
+        messageId: response.data.id,
+        threadId: response.data.threadId,
+        internetMessageId,
+      };
+    } catch (error) {
+      lastError = error;
+      const errorMsg = error.message || String(error);
+      
+      // If it's invalid_grant, retry (clear cache and try again)
+      if (errorMsg.includes('invalid_grant') && attempt < 2) {
+        continue; // Retry
+      }
+      
+      // For other errors or max retries reached, throw
+      throw new Error(`Failed to send email: ${errorMsg}`);
+    }
+  }
+  
+  // Should never reach here, but just in case
+  throw new Error(`Failed to send email after retries: ${lastError?.message || 'Unknown error'}`);
 }
 
 export function getConfiguredAccounts() {

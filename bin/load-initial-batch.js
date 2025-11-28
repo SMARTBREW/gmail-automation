@@ -69,7 +69,13 @@ async function main() {
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
 
       // Use recipientName if provided, otherwise fall back to name
-      const finalRecipientName = recipientName || name;
+      let finalRecipientName = recipientName || name;
+      // Extract just the name part if recipientName contains comma (format: "Name, Dear Name")
+      if (finalRecipientName && finalRecipientName.includes(',')) {
+        finalRecipientName = finalRecipientName.split(',')[0].trim();
+      }
+      // Normalize: trim whitespace and ensure it's not empty
+      finalRecipientName = finalRecipientName ? finalRecipientName.trim() : '';
 
       let meta = templateCache.get(campaignName);
       if (!meta) {
@@ -101,12 +107,15 @@ async function main() {
       // Fill placeholders
       const senderName = getAccountDisplayName(from) || '';
       if (finalRecipientName) {
-        body = body.replace(/{recipientName}/g, finalRecipientName);
+        // Use case-insensitive replace to handle any casing issues
+        body = body.replace(/{recipientName}/gi, finalRecipientName);
       } else {
-        body = body.replace(/Dear {recipientName},/g, 'Hello,');
-        body = body.replace(/{recipientName}/g, '');
+        // If no name, replace "Dear {recipientName}," with "Hello,"
+        body = body.replace(/Dear\s+{recipientName},/gi, 'Hello,');
+        // Remove any remaining {recipientName} placeholders
+        body = body.replace(/{recipientName}/gi, '');
       }
-      body = body.replace(/{senderName}/g, senderName);
+      body = body.replace(/{senderName}/gi, senderName);
 
       // Use the same notBefore for all emails (unless window is specified)
       const notBefore = windowSpec ? computeRandomNotBefore(windowSpec) : baseNotBefore;

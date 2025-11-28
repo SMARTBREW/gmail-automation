@@ -86,6 +86,7 @@ function addJitter(date, pct = JITTER_PCT) {
 function addIntervalJitter(baseIntervalMs) {
   // Randomize interval: between 1 minute (60000ms) and 2 minutes (120000ms)
   // This prevents emails from sending at exactly the same interval
+  // IGNORE baseIntervalMs - always use 1-2 minute jitter as specified
   const minIntervalMs = 60000; // 1 minute minimum
   const maxIntervalMs = 120000; // 2 minutes maximum
   // Return random interval between min and max
@@ -131,25 +132,38 @@ function makeIdempotencyKey(obj) {
 }
 
 export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, notBefore }) {
-  const payload = { type: 'initial', from, to, subject, body, campaignName, recipientName, notBefore: notBefore ? new Date(notBefore) : undefined };
+  // Normalize recipientName: extract just the name part if it contains comma (format: "Name, Dear Name")
+  let normalizedRecipientName = recipientName || '';
+  if (normalizedRecipientName && normalizedRecipientName.includes(',')) {
+    normalizedRecipientName = normalizedRecipientName.split(',')[0].trim();
+  }
+  normalizedRecipientName = normalizedRecipientName ? normalizedRecipientName.trim() : '';
+  
+  const payload = { type: 'initial', from, to, subject, body, campaignName, recipientName: normalizedRecipientName, notBefore: notBefore ? new Date(notBefore) : undefined };
   const idempotencyKey = makeIdempotencyKey({ ...payload, k: 'v1' });
   // If notBefore is provided, use it directly (no jitter/weekend delays for batch loading)
-  // If not provided, add jitter and ensure weekday
-  const nb = payload.notBefore ? new Date(payload.notBefore) : ensureWeekday(addJitter(new Date()));
+  // If not provided, use current time (no future scheduling - let rate limiting handle delays)
+  const nb = payload.notBefore ? new Date(payload.notBefore) : new Date();
   await Outbox.updateOne(
     { idempotencyKey },
     {
       $setOnInsert: {
         type: 'initial',
-        from, to, subject, body,
-        campaignRef: { campaignName, originalSubject: subject, recipientName },
+        from,
+        to,
+        subject,
+        body, // CRITICAL: Include body in $setOnInsert so it's saved on first insert
         notBefore: nb,
         status: 'pending',
         idempotencyKey,
       },
-      // Also update recipientName if document already exists (in case it was queued without a name before)
+      // Always update body and campaignRef fields (applies to both inserts and updates)
+      // This ensures body is NEVER missing, even if document already exists
       $set: {
-        'campaignRef.recipientName': recipientName,
+        body, // CRITICAL: Always update body, even if document exists (prevents missing body issue)
+        'campaignRef.recipientName': normalizedRecipientName, // Already normalized above
+        'campaignRef.campaignName': campaignName,
+        'campaignRef.originalSubject': subject,
       },
     },
     { upsert: true }
@@ -287,7 +301,7 @@ export async function processOutboxOnce() {
       if (usage.lastSentAt && nowMs - new Date(usage.lastSentAt).getTime() < minIntervalMs) {
         // Reschedule with random jitter: between 1 minute and 2 minutes from now
         // This prevents emails from sending at exactly the same interval
-        const intervalWithJitter = addIntervalJitter(minIntervalMs);
+        const intervalWithJitter = addIntervalJitter(); // Always 1-2 minutes, ignore minIntervalMs
         const nextAt = new Date(nowMs + intervalWithJitter);
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
@@ -318,75 +332,109 @@ export async function processOutboxOnce() {
       // Regenerate body from template if missing (for both initial and follow-up emails)
       let emailBody = job.body;
       if (!emailBody && job.campaignRef?.campaignName) {
-        const { getTemplateForCampaign } = await import('./campaignDbService.js');
-        const tpl = await getTemplateForCampaign(job.campaignRef.campaignName);
-        
-        if (job.type === 'initial') {
-          // For initial emails, use touchpoint 1 (randomly select from variants 1, 1a-1i)
-          const templatesMap = tpl.templates instanceof Map 
-            ? Object.fromEntries(tpl.templates) 
-            : tpl.templates || {};
-          const firstTouchKeys = Object.keys(templatesMap)
-            .filter((key) => key.toString().toLowerCase().startsWith('1'))
-            .sort();
+        try {
+          const { getTemplateForCampaign } = await import('./campaignDbService.js');
+          const tpl = await getTemplateForCampaign(job.campaignRef.campaignName);
           
-          if (firstTouchKeys.length > 0) {
-            // Randomly select a variant (same as batch script)
-            const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
-            const templateBody = templatesMap[chosenKey];
-            if (templateBody) {
-              const recipientName = job.campaignRef?.recipientName || '';
-              emailBody = templateBody;
-              if (recipientName) {
-                emailBody = emailBody.replace(/{recipientName}/g, recipientName);
-              } else {
-                emailBody = emailBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
-              }
-              const senderName = getAccountDisplayName(job.from) || '';
-              emailBody = emailBody.replace(/{senderName}/g, senderName);
-              
-              // CRITICAL: Save the regenerated body back to the database so it doesn't need to be regenerated again
-              await Outbox.findByIdAndUpdate(job._id, { 
-                $set: { body: emailBody },
-                $unset: { lastError: '' }
-              });
-            }
+          if (!tpl) {
+            throw new Error(`Template not found for campaign: ${job.campaignRef.campaignName}`);
           }
-        } else if (job.type === 'followup' && job.campaignRef?.campaignId) {
-          // For follow-ups, use the campaign's current touchpoint
-          const { Campaign } = await import('../models/Campaign.js');
-          const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
-          if (campaign) {
-            const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
+          
+          if (job.type === 'initial') {
+            // For initial emails, use touchpoint 1 (randomly select from variants 1, 1a-1i)
             const templatesMap = tpl.templates instanceof Map 
               ? Object.fromEntries(tpl.templates) 
               : tpl.templates || {};
-            const templateBody = templatesMap[nextTouch];
-            if (templateBody) {
-              // Generate body like enqueue-followups.js does
-              const recipientName = campaign.recipientName || '';
-              emailBody = templateBody;
-              if (recipientName) {
-                emailBody = emailBody.replace(/{recipientName}/g, recipientName);
-              } else {
-                emailBody = emailBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+            
+            if (!templatesMap || Object.keys(templatesMap).length === 0) {
+              throw new Error(`No templates found in campaign: ${job.campaignRef.campaignName}`);
+            }
+            
+            const firstTouchKeys = Object.keys(templatesMap)
+              .filter((key) => key.toString().toLowerCase().startsWith('1'))
+              .sort();
+            
+            if (firstTouchKeys.length === 0) {
+              throw new Error(`No touchpoint 1 templates found in campaign: ${job.campaignRef.campaignName}`);
+            }
+            
+            // Randomly select a variant (same as batch script)
+            const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
+            const templateBody = templatesMap[chosenKey];
+            
+            if (!templateBody) {
+              throw new Error(`Template body is empty for key: ${chosenKey}`);
+            }
+            
+            let recipientName = job.campaignRef?.recipientName || '';
+            // Extract just the name part if recipientName contains comma (format: "Name, Dear Name")
+            if (recipientName && recipientName.includes(',')) {
+              recipientName = recipientName.split(',')[0].trim();
+            }
+            // Normalize: trim whitespace and ensure it's not empty
+            recipientName = recipientName ? recipientName.trim() : '';
+            emailBody = templateBody;
+            if (recipientName) {
+              // Use case-insensitive replace to handle any casing issues
+              // Replace ALL occurrences of {recipientName} with the actual name
+              emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
+            } else {
+              // If no name, replace "Dear {recipientName}," with "Hello,"
+              emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
+              // Remove any remaining {recipientName} placeholders
+              emailBody = emailBody.replace(/{recipientName}/gi, '');
+            }
+            const senderName = getAccountDisplayName(job.from) || '';
+            emailBody = emailBody.replace(/{senderName}/g, senderName);
+            
+            // CRITICAL: Save the regenerated body back to the database so it doesn't need to be regenerated again
+            await Outbox.findByIdAndUpdate(job._id, { 
+              $set: { body: emailBody },
+              $unset: { lastError: '' }
+            });
+          } else if (job.type === 'followup' && job.campaignRef?.campaignId) {
+            // For follow-ups, use the campaign's current touchpoint
+            const { Campaign } = await import('../models/Campaign.js');
+            const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
+            if (campaign) {
+              const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
+              const templatesMap = tpl.templates instanceof Map 
+                ? Object.fromEntries(tpl.templates) 
+                : tpl.templates || {};
+              const templateBody = templatesMap[nextTouch];
+              if (templateBody) {
+                // Generate body like enqueue-followups.js does
+                const recipientName = campaign.recipientName || '';
+                emailBody = templateBody;
+                if (recipientName) {
+                  emailBody = emailBody.replace(/{recipientName}/g, recipientName);
+                } else {
+                  emailBody = emailBody.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+                }
+                const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
+                emailBody = emailBody.replace(/{senderName}/g, senderName);
+                
+                // CRITICAL: Save the regenerated body back to the database so it doesn't need to be regenerated again
+                await Outbox.findByIdAndUpdate(job._id, { 
+                  $set: { body: emailBody },
+                  $unset: { lastError: '' }
+                });
               }
-              const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
-              emailBody = emailBody.replace(/{senderName}/g, senderName);
-              
-              // CRITICAL: Save the regenerated body back to the database so it doesn't need to be regenerated again
-              await Outbox.findByIdAndUpdate(job._id, { 
-                $set: { body: emailBody },
-                $unset: { lastError: '' }
-              });
             }
           }
+        } catch (regenError) {
+          // Log the regeneration error for debugging
+          console.error(`Failed to regenerate body for job ${job._id} (${job.to}):`, regenError.message);
+          // Don't throw here - let it fall through to the error below with more context
         }
       }
       
       // Body is required for sending
       if (!emailBody) {
-        throw new Error(`Missing body for outbox job ${job._id} and could not regenerate from template`);
+        const errorMsg = job.campaignRef?.campaignName 
+          ? `Missing body for outbox job ${job._id} and could not regenerate from template (campaign: ${job.campaignRef.campaignName})`
+          : `Missing body for outbox job ${job._id} and could not regenerate (no campaign name)`;
+        throw new Error(errorMsg);
       }
       const headers = job.headers || {};
       const res = await sendEmail(job.from, job.to, job.subject, emailBody, headers);

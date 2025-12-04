@@ -1,4 +1,26 @@
 #!/usr/bin/env node
+/**
+ * Enqueue Follow-up Emails
+ * 
+ * This script queues follow-up emails for campaigns that are ready for their next touchpoint.
+ * 
+ * Follow-up Schedule (days after previous touchpoint):
+ * - TP1 → TP2: 3-5 days
+ * - TP2 → TP3: 5-7 days
+ * - TP3 → TP4: 7-9 days
+ * - TP4 → TP5: 7-9 days
+ * - TP5 → TP6: 10-13 days
+ * - TP6 → TP7: 10-15 days
+ * 
+ * IMPORTANT: The schedule is RELATIVE to lastSent date, not absolute.
+ * - If TP1 was sent 10-15 days late, TP2 will be queued immediately (it's overdue)
+ * - Once TP2 is sent, TP3 will be queued 5-7 days after TP2 (normal schedule)
+ * - This ensures campaigns catch up automatically, even if initial emails were delayed
+ * 
+ * The script processes:
+ * 1. Campaigns within the normal window (minDays to maxDays)
+ * 2. Overdue campaigns (past maxDays) - these need catch-up
+ */
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -20,6 +42,7 @@ async function main() {
   const ready = await campaignsReadyForFollowup(testMode);
   
   // Also get ALL overdue campaigns (past maxDays threshold) to catch up
+  // This ensures campaigns that got their initial email late still get follow-ups
   const { Campaign } = await import('../src/models/Campaign.js');
   const now = Date.now();
   const schedule = {
@@ -34,9 +57,12 @@ async function main() {
   const overdue = overdueCampaigns.filter(c => {
     const currentTp = c.touchpoint || 1;
     const [minDelay, maxDelay] = schedule[currentTp] || [999, 999];
+    const minMs = minDelay * 24 * 60 * 60 * 1000;
     const maxMs = maxDelay * 24 * 60 * 60 * 1000;
     const diff = now - new Date(c.lastSent).getTime();
-    return diff > maxMs; // Past the max window = overdue
+    // Include campaigns that are past the minimum delay (even if past max)
+    // This catches up on campaigns that got delayed initial emails
+    return diff >= minMs && diff > maxMs; // Past min but also past max = overdue, needs catch-up
   });
   
   // Combine ready and overdue, deduplicate by campaign ID
@@ -49,7 +75,11 @@ async function main() {
   });
   const allCampaigns = Array.from(allCampaignsMap.values());
   
-  console.log(`📊 Found ${ready.length} ready campaigns, ${overdue.length} overdue campaigns, ${allCampaigns.length} total to process\n`);
+  console.log(`📊 Found ${ready.length} ready campaigns (within window), ${overdue.length} overdue campaigns (needs catch-up), ${allCampaigns.length} total to process\n`);
+  if (overdue.length > 0) {
+    console.log(`💡 Note: Overdue campaigns include those that got initial emails late.`);
+    console.log(`   Follow-ups will be sent based on lastSent date, so they'll catch up automatically.\n`);
+  }
   
   let queued = 0, skipped = 0, errors = 0;
 
@@ -62,8 +92,9 @@ async function main() {
         continue;
       }
       
-      // Second check: Verify with Gmail API (may fail silently, so database check is primary)
+      // Second check: Verify with Gmail API (CRITICAL: if this fails, skip to be safe)
       let hasReply = false;
+      let replyCheckFailed = false;
       try {
         hasReply = await checkThreadForReply({
           fromEmail: c.from,
@@ -79,11 +110,15 @@ async function main() {
           continue;
         }
       } catch (replyCheckError) {
-        // If reply check fails (OAuth error, API error, etc.), log it but continue
-        // The database check above is the primary safeguard
+        // If reply check fails (OAuth error, API error, etc.), SKIP this campaign
+        // We can't verify if they replied, so it's safer to not queue a follow-up
+        // The worker will also check before sending, but we should be conservative here too
         const errorMsg = replyCheckError.message || String(replyCheckError);
-        console.warn(`⚠️  ${c.to}: Could not verify reply status (${errorMsg}), proceeding with caution`);
-        // Continue - database check already passed, and we'll check again before sending
+        replyCheckFailed = true;
+        skipped++;
+        console.warn(`⚠️  ${c.to}: Could not verify reply status (${errorMsg}) - SKIPPING to be safe`);
+        console.warn(`   💡 Fix OAuth/API issues and run again, or check manually`);
+        continue; // Skip this campaign - we'll check again next time
       }
 
       // Check if there's already a pending follow-up email for this campaign

@@ -326,11 +326,26 @@ export async function processOutboxOnce() {
   let processed = 0;
   // Track usage per account in this batch to avoid repeated DB queries
   const accountUsageMap = new Map();
+  // Track which accounts have sent in this batch to prevent multiple sends per account
+  const accountsSentThisBatch = new Set();
   
   for (let i = 0; i < 50; i++) {
     const job = await claimJobAtomically(now);
     if (!job) break;
     try {
+      // CRITICAL: Only allow one email per account per batch cycle to enforce minIntervalMs
+      // This prevents multiple emails from the same account being sent in the same second
+      if (accountsSentThisBatch.has(job.from)) {
+        // This account already sent in this batch - reschedule to respect minIntervalMs
+        const intervalWithJitter = addIntervalJitter(); // 1-2 minutes
+        const nextAt = new Date(nowMs + intervalWithJitter);
+        await Outbox.findByIdAndUpdate(job._id, { 
+          $set: { notBefore: nextAt, status: 'pending' },
+          $unset: { claimedAt: '', workerId: '' }
+        });
+        continue;
+      }
+      
       // Use cached usage to avoid repeated DB queries for same account
       let usage = accountUsageMap.get(job.from);
       if (!usage) {
@@ -582,6 +597,10 @@ export async function processOutboxOnce() {
       // Update cache immediately so next email can use updated usage
       usageCache.set(job.from, { usage, lastChecked: nowMs });
       accountUsageMap.set(job.from, usage);
+      // Mark this account as having sent in this batch to prevent multiple sends
+      accountsSentThisBatch.add(job.from);
+      // Mark this account as having sent in this batch to prevent multiple sends
+      accountsSentThisBatch.add(job.from);
       
       // Update outbox status immediately (must complete to mark job as sent)
       // CRITICAL: NEVER delete body - keep it for 7 days minimum

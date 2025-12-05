@@ -101,8 +101,60 @@ async function main() {
     });
   }
 
-  // 5. Check for follow-ups queued today
-  console.log('\n5️⃣  Follow-ups Queued Today:');
+  // 5. Check for overdue emails (past notBefore date but still pending)
+  console.log('\n5️⃣  Overdue Emails (Past Due Date):');
+  const nowDate = new Date();
+  const overdueEmails = await Outbox.find({
+    status: 'pending',
+    notBefore: { $lt: nowDate }
+  })
+    .sort({ notBefore: 1 })
+    .limit(50)
+    .lean();
+  
+  console.log(`   Found ${overdueEmails.length} overdue emails`);
+  if (overdueEmails.length > 0) {
+    console.log('\n   Overdue emails (first 20):');
+    overdueEmails.slice(0, 20).forEach(job => {
+      const overdueMinutes = Math.round((nowDate - new Date(job.notBefore).getTime()) / 60000);
+      const overdueHours = Math.floor(overdueMinutes / 60);
+      const overdueDays = Math.floor(overdueHours / 24);
+      let overdueStr = '';
+      if (overdueDays > 0) {
+        overdueStr = `${overdueDays} day(s)`;
+      } else if (overdueHours > 0) {
+        overdueStr = `${overdueHours} hour(s)`;
+      } else {
+        overdueStr = `${overdueMinutes} minute(s)`;
+      }
+      const notBefore = new Date(job.notBefore).toLocaleString();
+      console.log(`   - ${job.to} | From: ${job.from} | Type: ${job.type} | Overdue by: ${overdueStr} | Should have sent: ${notBefore}`);
+    });
+    if (overdueEmails.length > 20) {
+      console.log(`   ... and ${overdueEmails.length - 20} more overdue emails`);
+    }
+    
+    // Group by account
+    const overdueByAccount = {};
+    overdueEmails.forEach(job => {
+      if (!overdueByAccount[job.from]) {
+        overdueByAccount[job.from] = 0;
+      }
+      overdueByAccount[job.from]++;
+    });
+    
+    console.log('\n   Overdue emails by account:');
+    Object.entries(overdueByAccount)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([email, count]) => {
+        console.log(`     ${email}: ${count} overdue`);
+      });
+  } else {
+    console.log('   ✅ No overdue emails found');
+  }
+
+  // 6. Check for follow-ups queued today
+  console.log('\n6️⃣  Follow-ups Queued Today:');
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date();

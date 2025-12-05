@@ -304,8 +304,10 @@ export async function checkThreadForReply({ fromEmail, threadId, recipientEmail 
     } else {
       console.error(`Error checking thread ${threadId} for reply from ${fromEmail}:`, errorMsg);
     }
-    // Return false to assume no reply (safer than throwing)
-    return false;
+    // CRITICAL: Throw error instead of returning false
+    // This allows the caller to handle it properly (reschedule instead of sending)
+    // Returning false would cause emails to be sent to recipients who may have replied
+    throw error;
   }
 }
 

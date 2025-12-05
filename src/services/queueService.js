@@ -374,6 +374,17 @@ export async function processOutboxOnce() {
       if (job.type === 'followup' && job.campaignRef?.campaignId) {
         const { Campaign } = await import('../models/Campaign.js');
         const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
+        
+        // CRITICAL: If campaign was deleted, cancel the follow-up
+        if (!campaign) {
+          console.warn(`⚠️  Campaign ${job.campaignRef.campaignId} was deleted - cancelling follow-up to ${job.to}`);
+          await Outbox.findByIdAndUpdate(job._id, { 
+            $set: { status: 'sent' },
+            $unset: { body: '' }
+          });
+          continue; // Skip - campaign was deleted
+        }
+        
         if (campaign) {
           // FIRST CHECK: Database - if already marked as replied, skip immediately
           if (campaign.replied) {
@@ -572,10 +583,22 @@ export async function processOutboxOnce() {
       
       // FINAL CHECK: One last database check right before sending (catches race conditions)
       // If a reply came in between our earlier check and now, skip sending
+      // Also check if campaign was deleted
       if (job.type === 'followup' && job.campaignRef?.campaignId) {
         const { Campaign } = await import('../models/Campaign.js');
         const finalCampaignCheck = await Campaign.findById(job.campaignRef.campaignId).select('replied').lean();
-        if (finalCampaignCheck && finalCampaignCheck.replied) {
+        
+        // If campaign was deleted, cancel the follow-up
+        if (!finalCampaignCheck) {
+          console.warn(`⚠️  Campaign ${job.campaignRef.campaignId} was deleted before sending - cancelling follow-up to ${job.to}`);
+          await Outbox.findByIdAndUpdate(job._id, { 
+            $set: { status: 'sent' },
+            $unset: { body: '' }
+          });
+          continue; // Skip - campaign was deleted
+        }
+        
+        if (finalCampaignCheck.replied) {
           // Campaign was marked as replied between our check and now - skip sending
           await Outbox.findByIdAndUpdate(job._id, { 
             $set: { status: 'sent' }

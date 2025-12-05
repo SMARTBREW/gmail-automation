@@ -369,13 +369,13 @@ export async function processOutboxOnce() {
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
       }
-      // For follow-ups: check if replied BEFORE sending (not just when queuing)
-      // CRITICAL: Check database FIRST, then Gmail API as secondary check
+      // For follow-ups: check if replied BEFORE sending
+      // (Reply detection is handled by bin/poll-replies.js cron job, but we check here as final safety net)
       if (job.type === 'followup' && job.campaignRef?.campaignId) {
         const { Campaign } = await import('../models/Campaign.js');
         const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
         
-        // CRITICAL: If campaign was deleted, cancel the follow-up
+        // If campaign was deleted, cancel the follow-up
         if (!campaign) {
           console.warn(`⚠️  Campaign ${job.campaignRef.campaignId} was deleted - cancelling follow-up to ${job.to}`);
           await Outbox.findByIdAndUpdate(job._id, { 
@@ -385,47 +385,48 @@ export async function processOutboxOnce() {
           continue; // Skip - campaign was deleted
         }
         
-        if (campaign) {
-          // FIRST CHECK: Database - if already marked as replied, skip immediately
-          if (campaign.replied) {
+        // FIRST CHECK: Database - if already marked as replied, skip immediately
+        // (The polling service should have caught this, but this is a final safety check)
+        if (campaign.replied) {
+          await Outbox.findByIdAndUpdate(job._id, { 
+            $set: { status: 'sent' }
+          });
+          continue; // Skip - already marked as replied in database
+        }
+        
+        // SECOND CHECK: Gmail API - backup check in case polling service failed
+        // This is a safety net if the cron job fails or hasn't run yet
+        try {
+          const { checkThreadForReply } = await import('./gmailService.js');
+          const hasReply = await checkThreadForReply({
+            fromEmail: job.from,
+            threadId: job.headers?.threadId || campaign.threadId,
+            recipientEmail: job.to,
+          });
+          if (hasReply) {
+            // Mark campaign as replied and skip sending (polling service may have failed)
+            await Campaign.findByIdAndUpdate(job.campaignRef.campaignId, { replied: true });
             await Outbox.findByIdAndUpdate(job._id, { 
               $set: { status: 'sent' }
             });
-            continue; // Skip - already marked as replied in database
+            console.log(`⚠️  Found reply for ${job.to} during send check (polling service may have missed it)`);
+            continue; // Skip this email - they already replied
           }
-          
-          // SECOND CHECK: Gmail API - verify with latest thread data
-          try {
-            const { checkThreadForReply } = await import('./gmailService.js');
-            const hasReply = await checkThreadForReply({
-              fromEmail: job.from,
-              threadId: job.headers?.threadId || campaign.threadId,
-              recipientEmail: job.to,
-            });
-            if (hasReply) {
-              // Mark campaign as replied and skip sending
-              await Campaign.findByIdAndUpdate(job.campaignRef.campaignId, { replied: true });
-              await Outbox.findByIdAndUpdate(job._id, { 
-                $set: { status: 'sent' }
-              });
-              continue; // Skip this email - they already replied
-            }
-          } catch (replyCheckError) {
-            // If reply check fails, be conservative: reschedule instead of sending
-            // This prevents sending to recipients who may have replied but we can't verify
-            const errorMsg = replyCheckError.message || String(replyCheckError);
-            console.warn(`⚠️  Could not verify reply status for ${job.to} (${errorMsg}) - rescheduling to be safe`);
-            const nextTry = new Date(Date.now() + 15 * 60 * 1000); // Retry in 15 minutes
-            await Outbox.findByIdAndUpdate(job._id, {
-              $set: { 
-                status: 'pending', 
-                notBefore: nextTry,
-                lastError: `Reply check failed: ${errorMsg}`
-              },
-              $unset: { claimedAt: '', workerId: '' }
-            });
-            continue; // Skip sending - we'll retry later when API is available
-          }
+        } catch (replyCheckError) {
+          // If reply check fails, be conservative: reschedule instead of sending
+          // This prevents sending to recipients who may have replied but we can't verify
+          const errorMsg = replyCheckError.message || String(replyCheckError);
+          console.warn(`⚠️  Could not verify reply status for ${job.to} (${errorMsg}) - rescheduling to be safe`);
+          const nextTry = new Date(Date.now() + 15 * 60 * 1000); // Retry in 15 minutes
+          await Outbox.findByIdAndUpdate(job._id, {
+            $set: { 
+              status: 'pending', 
+              notBefore: nextTry,
+              lastError: `Reply check failed: ${errorMsg}`
+            },
+            $unset: { claimedAt: '', workerId: '' }
+          });
+          continue; // Skip sending - we'll retry later when API is available
         }
       }
       
@@ -582,8 +583,7 @@ export async function processOutboxOnce() {
       }
       
       // FINAL CHECK: One last database check right before sending (catches race conditions)
-      // If a reply came in between our earlier check and now, skip sending
-      // Also check if campaign was deleted
+      // If a reply was detected by polling service between our earlier check and now, skip sending
       if (job.type === 'followup' && job.campaignRef?.campaignId) {
         const { Campaign } = await import('../models/Campaign.js');
         const finalCampaignCheck = await Campaign.findById(job.campaignRef.campaignId).select('replied').lean();
@@ -598,8 +598,8 @@ export async function processOutboxOnce() {
           continue; // Skip - campaign was deleted
         }
         
+        // If campaign was marked as replied (by polling service), skip sending
         if (finalCampaignCheck.replied) {
-          // Campaign was marked as replied between our check and now - skip sending
           await Outbox.findByIdAndUpdate(job._id, { 
             $set: { status: 'sent' }
           });

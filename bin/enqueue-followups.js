@@ -27,7 +27,7 @@ dotenv.config();
 import { connectMongo } from '../src/db/mongo.js';
 import { campaignsReadyForFollowup, getTemplateForCampaign } from '../src/services/campaignDbService.js';
 import { enqueueFollowup } from '../src/services/queueService.js';
-import { getAccountDisplayName, checkThreadForReply } from '../src/services/gmailService.js';
+import { getAccountDisplayName } from '../src/services/gmailService.js';
 import { Outbox } from '../src/models/Outbox.js';
 
 function ensureAngle(id) {
@@ -85,41 +85,14 @@ async function main() {
 
   for (const c of allCampaigns) {
     try {
-      // First check: Skip if campaign is already marked as replied in database
+      // Skip if campaign is already marked as replied in database
+      // (Reply detection is handled by bin/poll-replies.js cron job)
       if (c.replied) {
         skipped++;
         console.log(`⏭️  ${c.to}: Already marked as replied in database`);
         continue;
       }
       
-      // Second check: Verify with Gmail API (CRITICAL: if this fails, skip to be safe)
-      let hasReply = false;
-      let replyCheckFailed = false;
-      try {
-        hasReply = await checkThreadForReply({
-          fromEmail: c.from,
-          threadId: c.threadId,
-          recipientEmail: c.to,
-        });
-        if (hasReply) {
-          // Mark in database and skip
-          const { Campaign } = await import('../models/Campaign.js');
-          await Campaign.findByIdAndUpdate(c._id, { replied: true });
-          skipped++;
-          console.log(`⏭️  ${c.to}: Found reply in thread, marked as replied`);
-          continue;
-        }
-      } catch (replyCheckError) {
-        // If reply check fails (OAuth error, API error, etc.), SKIP this campaign
-        // We can't verify if they replied, so it's safer to not queue a follow-up
-        // The worker will also check before sending, but we should be conservative here too
-        const errorMsg = replyCheckError.message || String(replyCheckError);
-        replyCheckFailed = true;
-        skipped++;
-        console.warn(`⚠️  ${c.to}: Could not verify reply status (${errorMsg}) - SKIPPING to be safe`);
-        console.warn(`   💡 Fix OAuth/API issues and run again, or check manually`);
-        continue; // Skip this campaign - we'll check again next time
-      }
 
       // Check if there's already a pending follow-up email for this campaign
       const existingPending = await Outbox.findOne({

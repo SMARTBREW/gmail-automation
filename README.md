@@ -1,6 +1,11 @@
 # Gmail Automation API
 
 node bin/load-initial-batch.js batches/contacts.json
+# Weekly (Sunday) - Safety check
+node scripts/mark-replied-campaigns.js
+
+# Only when you delete campaigns
+node scripts/cleanup-orphaned-followups.js --cancel
 
 A Node.js + Express backend for sending emails via Gmail API using saved refresh tokens.
 

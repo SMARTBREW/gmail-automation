@@ -15,6 +15,8 @@ const SKIP_WEEKENDS = (process.env.SKIP_WEEKENDS || 'false') === 'true';
 // Allowed daily send window for follow-ups (24h clock). Defaults: 11:00–17:00
 const ALLOWED_WINDOW_START_HOUR = parseInt(process.env.ALLOWED_WINDOW_START_HOUR || '11', 10);
 const ALLOWED_WINDOW_END_HOUR = parseInt(process.env.ALLOWED_WINDOW_END_HOUR || '17', 10);
+// Global daily limit for follow-ups (across all accounts) - max 100 follow-ups per day total
+const GLOBAL_FOLLOWUP_DAILY_LIMIT = parseInt(process.env.GLOBAL_FOLLOWUP_DAILY_LIMIT || '100', 10);
 
 // Cache config.json to avoid file I/O on every email (config rarely changes)
 let configCache = null;
@@ -369,6 +371,32 @@ export async function processOutboxOnce() {
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;
       }
+      
+      // Global follow-up daily limit check (across all accounts)
+      // Only allow 100 follow-ups per day total, regardless of account
+      if (job.type === 'followup') {
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date(todayStart);
+        todayEnd.setHours(23, 59, 59, 999);
+        
+        const followupsSentToday = await Outbox.countDocuments({
+          type: 'followup',
+          status: 'sent',
+          updatedAt: { $gte: todayStart, $lte: todayEnd }
+        });
+        
+        if (followupsSentToday >= GLOBAL_FOLLOWUP_DAILY_LIMIT) {
+          // Global limit reached - reschedule for tomorrow
+          const tomorrow = new Date(todayStart);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          await Outbox.findByIdAndUpdate(job._id, { 
+            $set: { notBefore: tomorrow, status: 'pending', claimedAt: null, workerId: null } 
+          });
+          continue;
+        }
+      }
+      
       // For follow-ups: check if replied BEFORE sending
       // (Reply detection is handled by bin/poll-replies.js cron job, but we check here as final safety net)
       if (job.type === 'followup' && job.campaignRef?.campaignId) {

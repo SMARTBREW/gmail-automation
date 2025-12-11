@@ -331,6 +331,19 @@ export async function processOutboxOnce() {
   // Track which accounts have sent in this batch to prevent multiple sends per account
   const accountsSentThisBatch = new Set();
   
+  // CRITICAL FIX: Check global follow-up limit ONCE at start of batch to prevent race condition
+  // This ensures we don't exceed 100 follow-ups per day even when processing multiple emails in parallel
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setHours(23, 59, 59, 999);
+  let followupsSentToday = await Outbox.countDocuments({
+    type: 'followup',
+    status: 'sent',
+    updatedAt: { $gte: todayStart, $lte: todayEnd }
+  });
+  let followupsSentThisBatch = 0; // Track follow-ups sent in THIS batch
+  
   for (let i = 0; i < 50; i++) {
     const job = await claimJobAtomically(now);
     if (!job) break;
@@ -374,19 +387,10 @@ export async function processOutboxOnce() {
       
       // Global follow-up daily limit check (across all accounts)
       // Only allow 100 follow-ups per day total, regardless of account
+      // FIX: Check database count + batch count to prevent race condition
       if (job.type === 'followup') {
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-        const todayEnd = new Date(todayStart);
-        todayEnd.setHours(23, 59, 59, 999);
-        
-        const followupsSentToday = await Outbox.countDocuments({
-          type: 'followup',
-          status: 'sent',
-          updatedAt: { $gte: todayStart, $lte: todayEnd }
-        });
-        
-        if (followupsSentToday >= GLOBAL_FOLLOWUP_DAILY_LIMIT) {
+        // Check if we've already hit the limit (database + this batch)
+        if (followupsSentToday + followupsSentThisBatch >= GLOBAL_FOLLOWUP_DAILY_LIMIT) {
           // Global limit reached - reschedule for tomorrow
           const tomorrow = new Date(todayStart);
           tomorrow.setDate(tomorrow.getDate() + 1);
@@ -650,8 +654,6 @@ export async function processOutboxOnce() {
       accountUsageMap.set(job.from, usage);
       // Mark this account as having sent in this batch to prevent multiple sends
       accountsSentThisBatch.add(job.from);
-      // Mark this account as having sent in this batch to prevent multiple sends
-      accountsSentThisBatch.add(job.from);
       
       // Update outbox status immediately (must complete to mark job as sent)
       // CRITICAL: NEVER delete body - keep it for 7 days minimum
@@ -662,6 +664,11 @@ export async function processOutboxOnce() {
         $set: { status: 'sent' }
         // Body is kept for 7 days - cleanupOldBodies() handles removal for sent/failed only
       });
+      
+      // Increment follow-up batch counter to prevent race condition
+      if (job.type === 'followup') {
+        followupsSentThisBatch += 1;
+      }
       
       // Save usage in background (fire and forget - already updated in memory/cache)
       // This doesn't block the next email from processing

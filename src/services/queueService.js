@@ -8,24 +8,20 @@ import crypto from 'crypto';
 
 const DAILY_CAP_DEFAULT = parseInt(process.env.DAILY_CAP || '400', 10);
 const MIN_INTERVAL_MS_DEFAULT = parseInt(process.env.MIN_INTERVAL_MS || '60000', 10);
-const RESET_HOUR_LOCAL_DEFAULT = parseInt(process.env.RESET_HOUR_LOCAL || '0', 10); // midnight by default
+const RESET_HOUR_LOCAL_DEFAULT = parseInt(process.env.RESET_HOUR_LOCAL || '0', 10); 
 const STUCK_JOB_MINUTES = parseInt(process.env.STUCK_JOB_MINUTES || '10', 10);
-const JITTER_PCT = parseFloat(process.env.JITTER_PCT || '0.1'); // 10%
+const JITTER_PCT = parseFloat(process.env.JITTER_PCT || '0.1'); 
 const SKIP_WEEKENDS = (process.env.SKIP_WEEKENDS || 'false') === 'true';
-// Allowed daily send window for follow-ups (24h clock). Defaults: 11:00–17:00
 const ALLOWED_WINDOW_START_HOUR = parseInt(process.env.ALLOWED_WINDOW_START_HOUR || '11', 10);
 const ALLOWED_WINDOW_END_HOUR = parseInt(process.env.ALLOWED_WINDOW_END_HOUR || '17', 10);
-// Global daily limit for follow-ups (across all accounts) - max 100 follow-ups per day total
 const GLOBAL_FOLLOWUP_DAILY_LIMIT = parseInt(process.env.GLOBAL_FOLLOWUP_DAILY_LIMIT || '100', 10);
 
-// Cache config.json to avoid file I/O on every email (config rarely changes)
 let configCache = null;
 let configCacheTime = 0;
-const CONFIG_CACHE_TTL_MS = 30 * 1000; // Cache for 30 seconds
+const CONFIG_CACHE_TTL_MS = 30 * 1000;
 
 function loadConfig() {
   const now = Date.now();
-  // Return cached config if still fresh
   if (configCache && (now - configCacheTime) < CONFIG_CACHE_TTL_MS) {
     return configCache;
   }
@@ -55,7 +51,7 @@ function computeNextResetAt(resetHourLocal) {
   const now = new Date();
   const reset = new Date(now);
   reset.setHours(resetHourLocal, 0, 0, 0);
-  if (reset <= now) reset.setDate(reset.getDate() + 1); // next day
+  if (reset <= now) reset.setDate(reset.getDate() + 1);
   return reset;
 }
 
@@ -86,12 +82,8 @@ function addJitter(date, pct = JITTER_PCT) {
 }
 
 function addIntervalJitter(baseIntervalMs) {
-  // Randomize interval: between 1 minute (60000ms) and 2 minutes (120000ms)
-  // This prevents emails from sending at exactly the same interval
-  // IGNORE baseIntervalMs - always use 1-2 minute jitter as specified
-  const minIntervalMs = 60000; // 1 minute minimum
-  const maxIntervalMs = 120000; // 2 minutes maximum
-  // Return random interval between min and max
+  const minIntervalMs = 60000; 
+  const maxIntervalMs = 120000;
   return Math.floor(Math.random() * (maxIntervalMs - minIntervalMs + 1)) + minIntervalMs;
 }
 
@@ -105,17 +97,15 @@ function ensureWeekday(date) {
 }
 
 function clampToAllowedWindow(date) {
-  // If the time is outside the allowed daily window, move to the next start
-  // IMPORTANT: Use UTC hours to ensure consistent behavior regardless of server timezone
   const d = new Date(date);
   const start = new Date(d);
   start.setUTCHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
   const end = new Date(d);
   end.setUTCHours(ALLOWED_WINDOW_END_HOUR, 0, 0, 0);
   if (ALLOWED_WINDOW_END_HOUR <= ALLOWED_WINDOW_START_HOUR) {
-    // safety: if misconfigured, don't clamp
     return d;
   }
+  
   if (d < start) {
     return start;
   }
@@ -125,7 +115,7 @@ function clampToAllowedWindow(date) {
     next.setUTCHours(ALLOWED_WINDOW_START_HOUR, 0, 0, 0);
     return next;
   }
-  return d; // already within window
+  return d;
 }
 
 function makeIdempotencyKey(obj) {
@@ -474,13 +464,6 @@ export async function processOutboxOnce() {
         throw new Error(`Account not configured: ${job.from}`);
       }
       
-      // NOTE: Removed contacts.json validation check - it was causing false failures
-      // Idempotency key already prevents duplicates, so this check was redundant
-      // If you need to prevent sending old emails, clear them from the database instead
-      
-      // Body should always be present - if missing, it's a data integrity issue
-      // Bodies are kept for 7 days for sent/failed emails, and indefinitely for pending/sending
-      // Regeneration should rarely be needed, but we handle it gracefully
       let emailBody = job.body;
       
       if (!emailBody) {

@@ -1,9 +1,21 @@
 [
   
   {
-    "recipientName": "",
-    "email": "shreyasoumyaofficial@gmail.com",
-    "from": "workwithayush2003@gmail.com",
+    "recipientName": "Harshvi",
+    "email": "harshvishah34@gmail.com",
+    "from": "ansh.jwp8019@gmail.com",
+    "campaignName": "Wings of Hope"
+  },
+  {
+    "recipientName": "Nidhhi",
+    "email": "contactnidhhi@gmail.com",
+    "from": "ansh.jwp8019@gmail.com",
+    "campaignName": "Wings of Hope"
+  },
+  {
+    "recipientName": "Rhea",
+    "email": "rheakatiyarc@gmail.com",
+    "from": "ansh.jwp8019@gmail.com",
     "campaignName": "Wings of Hope"
   }
 ]

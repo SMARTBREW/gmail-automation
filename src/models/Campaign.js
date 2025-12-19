@@ -16,6 +16,7 @@ const CampaignSchema = new mongoose.Schema(
     messageIds: { type: [String], default: [] },
     internetMessageId: { type: String },
     allInternetMessageIds: { type: [String], default: [] },
+    lastReplyCheck: { type: Date, index: true }, // Track when we last checked for replies
   },
   { 
     timestamps: true,

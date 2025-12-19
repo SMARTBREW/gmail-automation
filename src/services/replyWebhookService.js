@@ -169,21 +169,41 @@ export async function pollForReplies(email, limit = 50) {
     const account = getAccountByEmail(email);
     const gmail = getGmailClient(account.email, account.refreshToken);
     
-    // Get campaigns that might have replies (recently sent)
-    const recentCampaigns = await Campaign.find({
+    const now = new Date();
+    // Only check campaigns that:
+    // 1. Were sent in the last 30 days (extended window to catch older replies)
+    // 2. Haven't been checked in the last 6 hours (avoid redundant checks)
+    // 3. Have a threadId (required for checking)
+    const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    // Get campaigns that need checking
+    const campaignsToCheck = await Campaign.find({
       from: email,
       replied: false,
-      lastSent: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }, // Last 7 days
+      lastSent: { $gte: thirtyDaysAgo }, // Extended to 30 days
       threadId: { $exists: true, $ne: null },
+      $or: [
+        { lastReplyCheck: { $exists: false } }, // Never checked
+        { lastReplyCheck: null }, // Never checked
+        { lastReplyCheck: { $lt: sixHoursAgo } }, // Checked more than 6 hours ago
+      ],
     })
+    .sort({ lastSent: -1 }) // Check most recent first
     .limit(limit)
     .lean();
     
     let markedAsReplied = 0;
     let cancelledFollowups = 0;
     
-    for (const campaign of recentCampaigns) {
+    for (const campaign of campaignsToCheck) {
       try {
+        // Update lastReplyCheck immediately to avoid duplicate checks if script runs in parallel
+        await Campaign.findByIdAndUpdate(
+          campaign._id,
+          { $set: { lastReplyCheck: now } }
+        );
+        
         const hasReply = await checkThreadForReply({
           fromEmail: email,
           threadId: campaign.threadId,
@@ -203,8 +223,7 @@ export async function pollForReplies(email, limit = 50) {
               'campaignRef.campaignId': campaign._id,
             },
             {
-              $set: { status: 'sent' },
-              $unset: { body: '' },
+              $set: { status: 'cancelled' },
             }
           );
           
@@ -217,11 +236,16 @@ export async function pollForReplies(email, limit = 50) {
         if (!error.message.includes('oauth2') && !error.message.includes('token')) {
           console.error(`Error checking reply for ${campaign.to}:`, error.message);
         }
+        // Reset lastReplyCheck on error so it can be retried
+        await Campaign.findByIdAndUpdate(
+          campaign._id,
+          { $unset: { lastReplyCheck: '' } }
+        );
       }
     }
     
     return {
-      checked: recentCampaigns.length,
+      checked: campaignsToCheck.length,
       markedAsReplied,
       cancelledFollowups,
     };

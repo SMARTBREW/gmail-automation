@@ -18,6 +18,47 @@ export async function createCampaignRecord({
   messageId,
   internetMessageId,
 }) {
+  // Check if a campaign already exists for this recipient+from+campaignName combination
+  // This prevents duplicate campaigns when load-initial-batch.js is run multiple times
+  const existing = await Campaign.findOne({
+    to,
+    from,
+    campaignName,
+  }).lean();
+
+  if (existing) {
+    // Campaign already exists - return it instead of creating a duplicate
+    // Only update fields that might have changed (threadId, messageIds, etc.)
+    const updates = {};
+    if (threadId && threadId !== existing.threadId) {
+      updates.threadId = threadId;
+    }
+    if (messageId && !existing.messageIds?.includes(messageId)) {
+      updates.messageIds = [...(existing.messageIds || []), messageId];
+    }
+    if (internetMessageId && !existing.allInternetMessageIds?.includes(internetMessageId)) {
+      updates.allInternetMessageIds = [...(existing.allInternetMessageIds || []), internetMessageId];
+    }
+    if (internetMessageId && internetMessageId !== existing.internetMessageId) {
+      updates.internetMessageId = internetMessageId;
+    }
+    if (recipientName && recipientName !== existing.recipientName) {
+      updates.recipientName = recipientName;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const updated = await Campaign.findByIdAndUpdate(
+        existing._id,
+        { $set: updates },
+        { new: true }
+      ).lean();
+      return updated;
+    }
+
+    return existing;
+  }
+
+  // No existing campaign - create a new one
   // Always save recipientName (even if empty) to ensure it's available for follow-ups
   // Empty string is better than null/undefined for template replacement
   const doc = await Campaign.create({

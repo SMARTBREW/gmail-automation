@@ -411,20 +411,31 @@ export async function processOutboxOnce() {
             continue; // Skip this email - they already replied
           }
         } catch (replyCheckError) {
-          // If reply check fails, be conservative: reschedule instead of sending
-          // This prevents sending to recipients who may have replied but we can't verify
+          // If reply check fails, check if it's an OAuth error
+          // OAuth errors (invalid_grant) mean the token expired, but we can still send
+          // The polling service (bin/poll-replies.js) will handle reply detection
           const errorMsg = replyCheckError.message || String(replyCheckError);
-          console.warn(`⚠️  Could not verify reply status for ${job.to} (${errorMsg}) - rescheduling to be safe`);
-          const nextTry = new Date(Date.now() + 15 * 60 * 1000); // Retry in 15 minutes
-          await Outbox.findByIdAndUpdate(job._id, {
-            $set: { 
-              status: 'pending', 
-              notBefore: nextTry,
-              lastError: `Reply check failed: ${errorMsg}`
-            },
-            $unset: { claimedAt: '', workerId: '' }
-          });
-          continue; // Skip sending - we'll retry later when API is available
+          const isOAuthError = errorMsg.includes('invalid_grant') || errorMsg.includes('unauthorized');
+          
+          if (isOAuthError) {
+            // OAuth error - skip reply check and proceed with sending
+            // The polling service will catch replies, and the actual send will use the token
+            console.warn(`⚠️  Reply check failed due to OAuth error for ${job.to} - proceeding with send (polling service will catch replies)`);
+            // Clear the error and continue - don't reschedule
+            await Outbox.findByIdAndUpdate(job._id, {
+              $unset: { lastError: '' }
+            });
+            // Continue to send - don't skip
+          } else {
+            // Non-OAuth error - might be a real issue, but still proceed with sending
+            // The reply check is just a safety net, polling service is primary
+            console.warn(`⚠️  Reply check failed for ${job.to} (${errorMsg}) - proceeding anyway (polling service will catch replies)`);
+            // Clear the error and continue
+            await Outbox.findByIdAndUpdate(job._id, {
+              $unset: { lastError: '' }
+            });
+            // Continue to send - don't skip
+          }
         }
       }
       

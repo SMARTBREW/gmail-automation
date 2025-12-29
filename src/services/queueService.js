@@ -7,7 +7,8 @@ import path from 'path';
 import crypto from 'crypto';
 
 const DAILY_CAP_DEFAULT = parseInt(process.env.DAILY_CAP || '400', 10);
-const MIN_INTERVAL_MS_DEFAULT = parseInt(process.env.MIN_INTERVAL_MS || '60000', 10);
+const MIN_INTERVAL_MS_DEFAULT = parseInt(process.env.MIN_INTERVAL_MS || '240000', 10);
+const MAX_INTERVAL_MS_DEFAULT = parseInt(process.env.MAX_INTERVAL_MS || '360000', 10);
 const RESET_HOUR_LOCAL_DEFAULT = parseInt(process.env.RESET_HOUR_LOCAL || '0', 10); 
 const STUCK_JOB_MINUTES = parseInt(process.env.STUCK_JOB_MINUTES || '10', 10);
 const JITTER_PCT = parseFloat(process.env.JITTER_PCT || '0.1'); 
@@ -43,6 +44,7 @@ function getAccountLimits(email) {
   return {
     dailyCap: acct.dailyCap ?? DAILY_CAP_DEFAULT,
     minIntervalMs: acct.minIntervalMs ?? MIN_INTERVAL_MS_DEFAULT,
+    maxIntervalMs: acct.maxIntervalMs ?? MAX_INTERVAL_MS_DEFAULT,
     resetHourLocal: acct.resetHourLocal ?? RESET_HOUR_LOCAL_DEFAULT,
   };
 }
@@ -81,10 +83,13 @@ function addJitter(date, pct = JITTER_PCT) {
   return new Date(ms + delta);
 }
 
-function addIntervalJitter(baseIntervalMs) {
-  const minIntervalMs = 60000; 
-  const maxIntervalMs = 120000;
-  return Math.floor(Math.random() * (maxIntervalMs - minIntervalMs + 1)) + minIntervalMs;
+function addIntervalJitter(limits) {
+  // Random gap between minIntervalMs and maxIntervalMs from account config
+  const minIntervalMs = limits?.minIntervalMs ?? MIN_INTERVAL_MS_DEFAULT;
+  const maxIntervalMs = limits?.maxIntervalMs ?? MAX_INTERVAL_MS_DEFAULT;
+  // Ensure max is at least equal to min
+  const max = Math.max(maxIntervalMs, minIntervalMs);
+  return Math.floor(Math.random() * (max - minIntervalMs + 1)) + minIntervalMs;
 }
 
 function ensureWeekday(date) {
@@ -331,7 +336,8 @@ export async function processOutboxOnce() {
       // This prevents multiple emails from the same account being sent in the same second
       if (accountsSentThisBatch.has(job.from)) {
         // This account already sent in this batch - reschedule to respect minIntervalMs
-        const intervalWithJitter = addIntervalJitter(); // 1-2 minutes
+        const limits = getAccountLimits(job.from);
+        const intervalWithJitter = addIntervalJitter(limits); // Random between min-max
         const nextAt = new Date(nowMs + intervalWithJitter);
         await Outbox.findByIdAndUpdate(job._id, { 
           $set: { notBefore: nextAt, status: 'pending' },
@@ -356,9 +362,9 @@ export async function processOutboxOnce() {
       // Min interval check - use consistent timestamp (permanent optimization)
       const minIntervalMs = limits.minIntervalMs;
       if (usage.lastSentAt && nowMs - new Date(usage.lastSentAt).getTime() < minIntervalMs) {
-        // Reschedule with random jitter: between 1 minute and 2 minutes from now
+        // Reschedule with random jitter: between minIntervalMs and maxIntervalMs from now
         // This prevents emails from sending at exactly the same interval
-        const intervalWithJitter = addIntervalJitter(); // Always 1-2 minutes, ignore minIntervalMs
+        const intervalWithJitter = addIntervalJitter(limits); // Random between min-max
         const nextAt = new Date(nowMs + intervalWithJitter);
         await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
         continue;

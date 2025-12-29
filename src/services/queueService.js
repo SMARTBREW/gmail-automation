@@ -14,7 +14,7 @@ const JITTER_PCT = parseFloat(process.env.JITTER_PCT || '0.1');
 const SKIP_WEEKENDS = (process.env.SKIP_WEEKENDS || 'false') === 'true';
 const ALLOWED_WINDOW_START_HOUR = parseInt(process.env.ALLOWED_WINDOW_START_HOUR || '11', 10);
 const ALLOWED_WINDOW_END_HOUR = parseInt(process.env.ALLOWED_WINDOW_END_HOUR || '17', 10);
-const GLOBAL_FOLLOWUP_DAILY_LIMIT = parseInt(process.env.GLOBAL_FOLLOWUP_DAILY_LIMIT || '100', 10);
+// Removed global follow-up limit - each account now uses its own dailyCap independently
 
 let configCache = null;
 let configCacheTime = 0;
@@ -321,18 +321,7 @@ export async function processOutboxOnce() {
   // Track which accounts have sent in this batch to prevent multiple sends per account
   const accountsSentThisBatch = new Set();
   
-  // CRITICAL FIX: Check global follow-up limit ONCE at start of batch to prevent race condition
-  // This ensures we don't exceed 100 follow-ups per day even when processing multiple emails in parallel
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(todayStart);
-  todayEnd.setHours(23, 59, 59, 999);
-  let followupsSentToday = await Outbox.countDocuments({
-    type: 'followup',
-    status: 'sent',
-    updatedAt: { $gte: todayStart, $lte: todayEnd }
-  });
-  let followupsSentThisBatch = 0; // Track follow-ups sent in THIS batch
+  // Removed global follow-up limit - each account uses its own dailyCap independently
   
   for (let i = 0; i < 50; i++) {
     const job = await claimJobAtomically(now);
@@ -375,21 +364,8 @@ export async function processOutboxOnce() {
         continue;
       }
       
-      // Global follow-up daily limit check (across all accounts)
-      // Only allow 100 follow-ups per day total, regardless of account
-      // FIX: Check database count + batch count to prevent race condition
-      if (job.type === 'followup') {
-        // Check if we've already hit the limit (database + this batch)
-        if (followupsSentToday + followupsSentThisBatch >= GLOBAL_FOLLOWUP_DAILY_LIMIT) {
-          // Global limit reached - reschedule for tomorrow
-          const tomorrow = new Date(todayStart);
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          await Outbox.findByIdAndUpdate(job._id, { 
-            $set: { notBefore: tomorrow, status: 'pending', claimedAt: null, workerId: null } 
-          });
-          continue;
-        }
-      }
+      // Removed global follow-up limit - each account now uses its own dailyCap independently
+      // Follow-ups are subject to the same dailyCap as initial emails per account
       
       // For follow-ups: check if replied BEFORE sending
       // (Reply detection is handled by bin/poll-replies.js cron job, but we check here as final safety net)
@@ -648,10 +624,7 @@ export async function processOutboxOnce() {
         // Body is kept for 7 days - cleanupOldBodies() handles removal for sent/failed only
       });
       
-      // Increment follow-up batch counter to prevent race condition
-      if (job.type === 'followup') {
-        followupsSentThisBatch += 1;
-      }
+      // Removed follow-up batch counter - no longer needed without global limit
       
       // Save usage in background (fire and forget - already updated in memory/cache)
       // This doesn't block the next email from processing

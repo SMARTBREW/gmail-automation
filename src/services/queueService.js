@@ -13,8 +13,9 @@ const RESET_HOUR_LOCAL_DEFAULT = parseInt(process.env.RESET_HOUR_LOCAL || '0', 1
 const STUCK_JOB_MINUTES = parseInt(process.env.STUCK_JOB_MINUTES || '10', 10);
 const JITTER_PCT = parseFloat(process.env.JITTER_PCT || '0.1'); 
 const SKIP_WEEKENDS = (process.env.SKIP_WEEKENDS || 'false') === 'true';
-const ALLOWED_WINDOW_START_HOUR = parseInt(process.env.ALLOWED_WINDOW_START_HOUR || '11', 10);
-const ALLOWED_WINDOW_END_HOUR = parseInt(process.env.ALLOWED_WINDOW_END_HOUR || '17', 10);
+// Sending window disabled - emails can send anytime (0-23 means all day)
+const ALLOWED_WINDOW_START_HOUR = parseInt(process.env.ALLOWED_WINDOW_START_HOUR || '0', 10);
+const ALLOWED_WINDOW_END_HOUR = parseInt(process.env.ALLOWED_WINDOW_END_HOUR || '23', 10);
 // Removed global follow-up limit - each account now uses its own dailyCap independently
 
 let configCache = null;

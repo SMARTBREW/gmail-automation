@@ -19,7 +19,9 @@ import { connectMongo } from '../src/db/mongo.js';
 import { getConfiguredAccounts } from '../src/services/gmailService.js';
 import { pollForReplies } from '../src/services/replyWebhookService.js';
 
-const email = process.argv[2];
+// Parse arguments - skip flags like --once and --interval=
+const args = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
+const email = args[0] || null;
 const intervalArg = process.argv.find(arg => arg.startsWith('--interval='));
 const intervalSeconds = intervalArg ? parseInt(intervalArg.split('=')[1]) : 60;
 

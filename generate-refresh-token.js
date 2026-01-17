@@ -1,14 +1,3 @@
-#!/usr/bin/env node
-/**
- * Helper script to generate refresh tokens with correct Gmail API scopes
- * 
- * This script helps you generate refresh tokens for your Gmail accounts with
- * ALL 3 required scopes:
- * - https://www.googleapis.com/auth/gmail.send
- * - https://www.googleapis.com/auth/gmail.settings.basic
- * - https://www.googleapis.com/auth/gmail.metadata
- */
-
 import dotenv from 'dotenv';
 import { google } from 'googleapis';
 import readline from 'readline';
@@ -21,7 +10,6 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.metadata',
 ];
 
-// Use urn:ietf:wg:oauth:2.0:oob as redirect URI (for installed/desktop apps)
 const REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob';
 
 const oauth2Client = new google.auth.OAuth2(
@@ -42,11 +30,11 @@ console.log('   1. OAuth 2.0 Client ID (Desktop app type)');
 console.log(`   2. Authorized redirect URI: ${REDIRECT_URI}`);
 console.log('   3. Go to: https://console.cloud.google.com/apis/credentials\n');
 
-// Generate authorization URL
+
 const authUrl = oauth2Client.generateAuthUrl({
   access_type: 'offline',
   scope: SCOPES,
-  prompt: 'consent', // Force consent screen to get refresh token
+  prompt: 'consent',
 });
 
 console.log('📋 Step 1: Open this URL in your browser and authorize the app:\n');

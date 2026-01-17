@@ -30,7 +30,7 @@ function getOAuth2Client(email, refreshToken) {
   return oauth2Client;
 }
 
-function getGmailClient(email, refreshToken) {
+export function getGmailClient(email, refreshToken) {
   // Check if cached client exists and token matches
   const cached = gmailClientCache.get(email);
   if (cached && cached.refreshToken === refreshToken) {
@@ -63,7 +63,7 @@ function loadConfig() {
   }
 }
 
-function getAccountByEmail(email) {
+export function getAccountByEmail(email) {
   const config = loadConfig();
   const account = config.accounts.find(acc => acc.email === email);
   if (!account) {

@@ -36,7 +36,7 @@ async function checkReplies() {
   for (const accountEmail of accounts) {
     try {
       console.log(`Checking ${accountEmail}...`);
-      const result = await pollForReplies(accountEmail, 100);
+      const result = await pollForReplies(accountEmail, 200);
       
       if (result.markedAsReplied > 0) {
         console.log(`   ✅ Marked ${result.markedAsReplied} campaigns as replied`);

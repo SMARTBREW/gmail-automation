@@ -482,59 +482,59 @@ export async function processOutboxOnce() {
           throw new Error(`Missing body for outbox job ${job._id} and no campaign name for regeneration`);
         }
         
-        try {
-          const { getTemplateForCampaign } = await import('./campaignDbService.js');
+          try {
+            const { getTemplateForCampaign } = await import('./campaignDbService.js');
           const tpl = await getTemplateForCampaign(campaignName);
-          
-          if (!tpl) {
+            
+            if (!tpl) {
             throw new Error(`Template not found for campaign: ${campaignName}`);
-          }
-          
-          if (job.type === 'initial') {
-            // For initial emails, use touchpoint 1 (randomly select from variants 1, 1a-1i)
-            const templatesMap = tpl.templates instanceof Map 
-              ? Object.fromEntries(tpl.templates) 
-              : tpl.templates || {};
-            
-            const firstTouchKeys = Object.keys(templatesMap)
-              .filter((key) => key.toString().toLowerCase().startsWith('1'))
-              .sort();
-            
-            if (firstTouchKeys.length === 0) {
-              throw new Error(`No touchpoint 1 templates found`);
             }
             
-            const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
-            const templateBody = templatesMap[chosenKey];
-            
-            if (!templateBody) {
-              throw new Error(`Template body is empty for key: ${chosenKey}`);
-            }
-            
+            if (job.type === 'initial') {
+              // For initial emails, use touchpoint 1 (randomly select from variants 1, 1a-1i)
+              const templatesMap = tpl.templates instanceof Map 
+                ? Object.fromEntries(tpl.templates) 
+                : tpl.templates || {};
+              
+              const firstTouchKeys = Object.keys(templatesMap)
+                .filter((key) => key.toString().toLowerCase().startsWith('1'))
+                .sort();
+              
+              if (firstTouchKeys.length === 0) {
+                throw new Error(`No touchpoint 1 templates found`);
+              }
+              
+              const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
+              const templateBody = templatesMap[chosenKey];
+              
+              if (!templateBody) {
+                throw new Error(`Template body is empty for key: ${chosenKey}`);
+              }
+              
             // Clean up recipient name
-            if (recipientName && recipientName.includes(',')) {
-              recipientName = recipientName.split(',')[0].trim();
-            }
+              if (recipientName && recipientName.includes(',')) {
+                recipientName = recipientName.split(',')[0].trim();
+              }
             if (recipientName.toLowerCase().startsWith('dear')) {
               recipientName = recipientName.replace(/^dear\s+/i, '').trim();
             }
-            recipientName = recipientName ? recipientName.trim() : '';
-            
-            emailBody = templateBody;
-            if (recipientName) {
-              emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
-            } else {
-              emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
-              emailBody = emailBody.replace(/{recipientName}/gi, '');
-            }
-            const senderName = getAccountDisplayName(job.from) || '';
-            emailBody = emailBody.replace(/{senderName}/g, senderName);
-            
-            // Save regenerated body back to database
-            await Outbox.findByIdAndUpdate(job._id, { 
-              $set: { body: emailBody },
-              $unset: { lastError: '' }
-            });
+              recipientName = recipientName ? recipientName.trim() : '';
+              
+              emailBody = templateBody;
+              if (recipientName) {
+                emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
+              } else {
+                emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
+                emailBody = emailBody.replace(/{recipientName}/gi, '');
+              }
+              const senderName = getAccountDisplayName(job.from) || '';
+              emailBody = emailBody.replace(/{senderName}/g, senderName);
+              
+              // Save regenerated body back to database
+              await Outbox.findByIdAndUpdate(job._id, { 
+                $set: { body: emailBody },
+                $unset: { lastError: '' }
+              });
           } else if (job.type === 'followup') {
             // For follow-ups, get touchpoint from campaign
             if (!campaign && job.campaignRef?.campaignId) {
@@ -542,13 +542,13 @@ export async function processOutboxOnce() {
               campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
             }
             
-            if (campaign) {
-              const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
-              const templatesMap = tpl.templates instanceof Map 
-                ? Object.fromEntries(tpl.templates) 
-                : tpl.templates || {};
-              const templateBody = templatesMap[nextTouch];
-              if (templateBody) {
+              if (campaign) {
+                const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
+                const templatesMap = tpl.templates instanceof Map 
+                  ? Object.fromEntries(tpl.templates) 
+                  : tpl.templates || {};
+                const templateBody = templatesMap[nextTouch];
+                if (templateBody) {
                 recipientName = campaign.recipientName || recipientName || '';
                 // Clean up recipient name
                 if (recipientName && recipientName.includes(',')) {
@@ -559,30 +559,30 @@ export async function processOutboxOnce() {
                 }
                 recipientName = recipientName ? recipientName.trim() : '';
                 
-                emailBody = templateBody;
-                if (recipientName) {
-                  emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
-                } else {
-                  emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
-                  emailBody = emailBody.replace(/{recipientName}/gi, '');
-                }
-                const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
-                emailBody = emailBody.replace(/{senderName}/g, senderName);
-                
-                await Outbox.findByIdAndUpdate(job._id, { 
-                  $set: { body: emailBody },
-                  $unset: { lastError: '' }
-                });
+                  emailBody = templateBody;
+                  if (recipientName) {
+                    emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
+                  } else {
+                    emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
+                    emailBody = emailBody.replace(/{recipientName}/gi, '');
+                  }
+                  const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
+                  emailBody = emailBody.replace(/{senderName}/g, senderName);
+                  
+                  await Outbox.findByIdAndUpdate(job._id, { 
+                    $set: { body: emailBody },
+                    $unset: { lastError: '' }
+                  });
               } else {
                 throw new Error(`No template found for touchpoint ${nextTouch}`);
               }
             } else {
               throw new Error(`Campaign not found for follow-up email`);
+              }
             }
-          }
-        } catch (regenError) {
-          console.error(`Failed to regenerate body for job ${job._id} (${job.to}):`, regenError.message);
-          throw new Error(`Missing body for outbox job ${job._id} and regeneration failed: ${regenError.message}`);
+          } catch (regenError) {
+            console.error(`Failed to regenerate body for job ${job._id} (${job.to}):`, regenError.message);
+            throw new Error(`Missing body for outbox job ${job._id} and regeneration failed: ${regenError.message}`);
         }
       }
       

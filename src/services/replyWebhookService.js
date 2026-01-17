@@ -162,7 +162,7 @@ export async function processGmailNotification(email, historyId) {
  * Alternative: Poll-based reply detection (simpler, no Pub/Sub needed)
  * Checks for replies periodically by polling Gmail threads
  */
-export async function pollForReplies(email, limit = 50) {
+export async function pollForReplies(email, limit = 200) {
   try {
     await connectMongo();
     
@@ -177,8 +177,20 @@ export async function pollForReplies(email, limit = 50) {
     const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
-    // Get campaigns that need checking
-    const campaignsToCheck = await Campaign.find({
+    // PRIORITY: First check campaigns that have pending follow-ups (these are most critical)
+    const { Outbox } = await import('../models/Outbox.js');
+    const pendingFollowups = await Outbox.find({
+      type: 'followup',
+      status: { $in: ['pending', 'sending'] },
+      from: email
+    }).select('campaignRef.campaignId').lean();
+    
+    const priorityCampaignIds = pendingFollowups
+      .map(f => f.campaignRef?.campaignId)
+      .filter(Boolean);
+    
+    // Base query for campaigns that need checking
+    const baseQuery = {
       from: email,
       replied: false,
       lastSent: { $gte: thirtyDaysAgo }, // Extended to 30 days
@@ -188,10 +200,34 @@ export async function pollForReplies(email, limit = 50) {
         { lastReplyCheck: null }, // Never checked
         { lastReplyCheck: { $lt: sixHoursAgo } }, // Checked more than 6 hours ago
       ],
-    })
-    .sort({ lastSent: -1 }) // Check most recent first
-    .limit(limit)
-    .lean();
+    };
+    
+    // Get priority campaigns first (those with pending follow-ups)
+    let campaignsToCheck = [];
+    if (priorityCampaignIds.length > 0) {
+      const priorityCampaigns = await Campaign.find({
+        ...baseQuery,
+        _id: { $in: priorityCampaignIds }
+      })
+      .sort({ lastSent: -1 })
+      .limit(limit)
+      .lean();
+      campaignsToCheck = priorityCampaigns;
+    }
+    
+    // If we haven't reached the limit, get other campaigns
+    if (campaignsToCheck.length < limit) {
+      const remainingLimit = limit - campaignsToCheck.length;
+      const existingIds = campaignsToCheck.map(c => c._id);
+      const otherCampaigns = await Campaign.find({
+        ...baseQuery,
+        ...(existingIds.length > 0 ? { _id: { $nin: existingIds } } : {})
+      })
+      .sort({ lastSent: -1 })
+      .limit(remainingLimit)
+      .lean();
+      campaignsToCheck = [...campaignsToCheck, ...otherCampaigns];
+    }
     
     let markedAsReplied = 0;
     let cancelledFollowups = 0;

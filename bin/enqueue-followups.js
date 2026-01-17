@@ -27,7 +27,7 @@ dotenv.config();
 import { connectMongo } from '../src/db/mongo.js';
 import { campaignsReadyForFollowup, getTemplateForCampaign } from '../src/services/campaignDbService.js';
 import { enqueueFollowup } from '../src/services/queueService.js';
-import { getAccountDisplayName } from '../src/services/gmailService.js';
+import { getAccountDisplayName, checkThreadForReply } from '../src/services/gmailService.js';
 import { Outbox } from '../src/models/Outbox.js';
 
 function ensureAngle(id) {
@@ -93,6 +93,50 @@ async function main() {
         continue;
       }
       
+      // CRITICAL: Real-time reply check before enqueueing follow-up
+      // This catches replies even if the cron job hasn't run yet or missed them
+      if (c.threadId) {
+        try {
+          const hasReply = await checkThreadForReply({
+            fromEmail: c.from,
+            threadId: c.threadId,
+            recipientEmail: c.to,
+          });
+          
+          if (hasReply) {
+            // Mark campaign as replied immediately
+            const { Campaign } = await import('../src/models/Campaign.js');
+            await Campaign.findByIdAndUpdate(c._id, { replied: true });
+            
+            // Cancel any existing pending follow-ups
+            await Outbox.updateMany(
+              {
+                type: 'followup',
+                status: { $in: ['pending', 'sending'] },
+                'campaignRef.campaignId': c._id,
+              },
+              {
+                $set: { status: 'sent' },
+                $unset: { body: '' },
+              }
+            );
+            
+            skipped++;
+            console.log(`⏭️  ${c.to}: Found reply in thread - marked as replied and cancelled follow-ups`);
+            continue;
+          }
+        } catch (replyCheckError) {
+          // If reply check fails (e.g., OAuth error), log but don't block enqueueing
+          // The cron job will catch it later
+          const errorMsg = replyCheckError.message || String(replyCheckError);
+          if (errorMsg.includes('oauth2') || errorMsg.includes('token')) {
+            console.warn(`⚠️  ${c.to}: Could not check for reply (OAuth error) - will check later via cron`);
+          } else {
+            console.warn(`⚠️  ${c.to}: Could not check for reply - ${errorMsg.substring(0, 50)}...`);
+          }
+          // Continue to enqueue - if there's actually a reply, the cron job will catch it
+        }
+      }
 
       // Check if there's already a pending follow-up email for this campaign
       const existingPending = await Outbox.findOne({
@@ -102,9 +146,9 @@ async function main() {
       }).lean();
       
       if (existingPending) {
-        skipped++;
+          skipped++;
         console.log(`⏭️  ${c.to}: Already has pending follow-up email (TP${c.touchpoint || 1} → TP${Math.min(7, (c.touchpoint || 1) + 1)}), skipping`);
-        continue;
+          continue;
       }
 
       const nextTouch = Math.min(7, (c.touchpoint || 1) + 1);

@@ -96,17 +96,17 @@ async function main() {
       // CRITICAL: Real-time reply check before enqueueing follow-up
       // This catches replies even if the cron job hasn't run yet or missed them
       if (c.threadId) {
-        try {
+      try {
           const hasReply = await checkThreadForReply({
-            fromEmail: c.from,
-            threadId: c.threadId,
-            recipientEmail: c.to,
-          });
+          fromEmail: c.from,
+          threadId: c.threadId,
+          recipientEmail: c.to,
+        });
           
-          if (hasReply) {
+        if (hasReply) {
             // Mark campaign as replied immediately
             const { Campaign } = await import('../src/models/Campaign.js');
-            await Campaign.findByIdAndUpdate(c._id, { replied: true });
+          await Campaign.findByIdAndUpdate(c._id, { replied: true });
             
             // Cancel any existing pending follow-ups
             await Outbox.updateMany(

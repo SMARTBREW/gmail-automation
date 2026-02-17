@@ -169,16 +169,13 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, re
   
   // Build update object - ensure campaignRef is properly initialized
   const setFields = {
-    body, // Always update body
-    // Use dot notation for nested fields - Mongoose handles this correctly when schema is defined
+    body,
     'campaignRef.recipientName': normalizedRecipientName,
     'campaignRef.campaignName': campaignName,
     'campaignRef.originalSubject': subject,
   };
   
-  // Use Mongoose updateOne with proper nested field handling
-  // The schema now includes recipientName in campaignRef, so dot notation updates work correctly
-  // NOTE: campaignRef must NOT be in $setOnInsert when using dot notation in $set (MongoDB conflict)
+  
   const result = await Outbox.updateOne(
     { idempotencyKey },
     {

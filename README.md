@@ -25,7 +25,7 @@ A Node.js + Express backend for sending emails via Gmail API using saved refresh
 
 ## Setup
 
-1. **Install dependencies:**
+1. **Install
    ```bash
    npm install
    ```

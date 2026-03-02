@@ -12,7 +12,7 @@ A Node.js + Express backend for sending emails via Gmail API using saved refresh
 ## Features
 
 - Send emails via Gmail API using OAuth2 refresh tokens
-- Support for multiple accounts configured in `config.json`
+- Support for multiple accounts configured in 
 - Clean modular architecture with ES modules
 - RESTful API endpoints
 
@@ -24,11 +24,6 @@ A Node.js + Express backend for sending emails via Gmail API using saved refresh
 - Refresh tokens for each account you want to use
 
 ## Setup
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
 
 2. **Configure environment variables:**
    ```bash

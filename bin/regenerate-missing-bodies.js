@@ -39,13 +39,14 @@ async function main() {
       let campaignName = null;
       let recipientName = '';
       let touchpoint = null;
+      let campaign = null;
 
       // Get campaign name
       if (job.campaignRef?.campaignName) {
         campaignName = job.campaignRef.campaignName;
         recipientName = job.campaignRef.recipientName || '';
       } else if (job.campaignRef?.campaignId) {
-        const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
+        campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
         if (campaign) {
           campaignName = campaign.campaignName;
           recipientName = campaign.recipientName || '';
@@ -89,7 +90,7 @@ async function main() {
         emailBody = templatesMap[chosenKey];
       } else if (job.type === 'followup' && job.campaignRef?.campaignId) {
         // Use next touchpoint
-        const campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
+        campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
         if (campaign) {
           const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
           const templatesMap = tpl.templates instanceof Map 
@@ -120,7 +121,7 @@ async function main() {
         emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
         emailBody = emailBody.replace(/{recipientName}/gi, '');
       }
-      const senderName = getAccountDisplayName(job.from) || '';
+      const senderName = (campaign?.displayName || getAccountDisplayName(job.from) || '').trim();
       emailBody = emailBody.replace(/{senderName}/g, senderName);
 
       // Save regenerated body

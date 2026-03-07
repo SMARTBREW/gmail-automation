@@ -1,0 +1,200 @@
+{
+  "generatedAt": "2026-03-05T05:56:40.243Z",
+  "overview": {
+    "totalCampaigns": 1442,
+    "totalReplied": 159,
+    "totalUnreplied": 1283,
+    "responseRatePct": "11.0",
+    "initialEmailsSent": 1331,
+    "followupEmailsSent": 7575,
+    "totalEmailsSent": 8906,
+    "repliedByTouchpoint": {
+      "touchpoint_1": 48,
+      "touchpoint_2": 18,
+      "touchpoint_3": 35,
+      "touchpoint_4": 24,
+      "touchpoint_5": 25,
+      "touchpoint_6": 3,
+      "touchpoint_7": 6
+    }
+  },
+  "byExecutive": [
+    {
+      "email": "neha.wingsofhope@gmail.com",
+      "displayName": "Neha",
+      "hasLogin": true,
+      "totalCampaigns": 508,
+      "totalReplied": 47,
+      "responseRatePct": "9.3",
+      "initialSent": 512,
+      "followupSent": 2762,
+      "totalEmailsSent": 3274
+    },
+    {
+      "email": "rajveergangwar07@gmail.com",
+      "displayName": "Rajveer Gangwar",
+      "hasLogin": true,
+      "totalCampaigns": 171,
+      "totalReplied": 20,
+      "responseRatePct": "11.7",
+      "initialSent": 67,
+      "followupSent": 901,
+      "totalEmailsSent": 968
+    },
+    {
+      "email": "ansh.jwp8019@gmail.com",
+      "displayName": null,
+      "hasLogin": false,
+      "totalCampaigns": 167,
+      "totalReplied": 19,
+      "responseRatePct": "11.4",
+      "initialSent": 166,
+      "followupSent": 932,
+      "totalEmailsSent": 1098
+    },
+    {
+      "email": "samriddhijwp1977@gmail.com",
+      "displayName": "Samriddhi Verma",
+      "hasLogin": true,
+      "totalCampaigns": 162,
+      "totalReplied": 26,
+      "responseRatePct": "16.0",
+      "initialSent": 159,
+      "followupSent": 874,
+      "totalEmailsSent": 1033
+    },
+    {
+      "email": "mehakforanimal@gmail.com",
+      "displayName": "Mehak",
+      "hasLogin": true,
+      "totalCampaigns": 109,
+      "totalReplied": 4,
+      "responseRatePct": "3.7",
+      "initialSent": 109,
+      "followupSent": 642,
+      "totalEmailsSent": 751
+    },
+    {
+      "email": "vimleshsolnki20@gmail.com",
+      "displayName": "Vimlesh",
+      "hasLogin": true,
+      "totalCampaigns": 77,
+      "totalReplied": 5,
+      "responseRatePct": "6.5",
+      "initialSent": 77,
+      "followupSent": 311,
+      "totalEmailsSent": 388
+    },
+    {
+      "email": "neha.wingsofhope2025@gmail.com",
+      "displayName": "Neha Sharma",
+      "hasLogin": true,
+      "totalCampaigns": 53,
+      "totalReplied": 3,
+      "responseRatePct": "5.7",
+      "initialSent": 53,
+      "followupSent": 309,
+      "totalEmailsSent": 362
+    },
+    {
+      "email": "amrisha.pads4freedom@gmail.com",
+      "displayName": "Amrisha",
+      "hasLogin": true,
+      "totalCampaigns": 38,
+      "totalReplied": 1,
+      "responseRatePct": "2.6",
+      "initialSent": 38,
+      "followupSent": 187,
+      "totalEmailsSent": 225
+    },
+    {
+      "email": "shiviwingsofhope@gmail.com",
+      "displayName": "Shivi",
+      "hasLogin": true,
+      "totalCampaigns": 34,
+      "totalReplied": 4,
+      "responseRatePct": "11.8",
+      "initialSent": 34,
+      "followupSent": 134,
+      "totalEmailsSent": 168
+    },
+    {
+      "email": "kavita.pads4freedom@gmail.com",
+      "displayName": "Kavita",
+      "hasLogin": true,
+      "totalCampaigns": 33,
+      "totalReplied": 0,
+      "responseRatePct": "0.0",
+      "initialSent": 33,
+      "followupSent": 165,
+      "totalEmailsSent": 198
+    },
+    {
+      "email": "workneeharikakaila06@gmail.com",
+      "displayName": "Neeharika Kaila",
+      "hasLogin": true,
+      "totalCampaigns": 29,
+      "totalReplied": 9,
+      "responseRatePct": "31.0",
+      "initialSent": 29,
+      "followupSent": 103,
+      "totalEmailsSent": 132
+    },
+    {
+      "email": "sameekshas935@gmail.com",
+      "displayName": null,
+      "hasLogin": false,
+      "totalCampaigns": 18,
+      "totalReplied": 18,
+      "responseRatePct": "100.0",
+      "initialSent": 18,
+      "followupSent": 63,
+      "totalEmailsSent": 81
+    },
+    {
+      "email": "pawsitiveprotectors4@gmail.com",
+      "displayName": "Vanshu",
+      "hasLogin": true,
+      "totalCampaigns": 13,
+      "totalReplied": 0,
+      "responseRatePct": "0.0",
+      "initialSent": 13,
+      "followupSent": 65,
+      "totalEmailsSent": 78
+    },
+    {
+      "email": "pawsitiveprotectors@gmail.com",
+      "displayName": "Nandini",
+      "hasLogin": true,
+      "totalCampaigns": 11,
+      "totalReplied": 1,
+      "responseRatePct": "9.1",
+      "initialSent": 11,
+      "followupSent": 62,
+      "totalEmailsSent": 73
+    },
+    {
+      "email": "radhikaforanimal@gmail.com",
+      "displayName": "Radhika",
+      "hasLogin": true,
+      "totalCampaigns": 10,
+      "totalReplied": 0,
+      "responseRatePct": "0.0",
+      "initialSent": 11,
+      "followupSent": 21,
+      "totalEmailsSent": 32
+    },
+    {
+      "email": "iamayushanand365@gmail.com",
+      "displayName": "Ayush",
+      "hasLogin": true,
+      "totalCampaigns": 9,
+      "totalReplied": 2,
+      "responseRatePct": "22.2",
+      "initialSent": 1,
+      "followupSent": 44,
+      "totalEmailsSent": 45
+    }
+  ],
+  "configAccountCount": 14
+}

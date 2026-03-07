@@ -15,7 +15,11 @@
     "check-followups": "node scripts/check-followup-status.js",
     "test-tokens": "node scripts/test-oauth-tokens.js",
     "diagnose-outbox": "node scripts/diagnose-outbox.js",
-    "cleanup-replied": "node scripts/cleanup-replied-campaigns.js"
+    "cleanup-replied": "node scripts/cleanup-replied-campaigns.js",
+    "presentation-report": "node scripts/presentation-report.js",
+    "presentation": "node scripts/presentation-report.js && node scripts/build-presentation.js",
+    "weekly-presentation-report": "node scripts/weekly-presentation-report.js",
+    "weekly-presentation": "node scripts/weekly-presentation-report.js && node scripts/build-weekly-presentation.js"
   },
   "keywords": [
     "gmail",

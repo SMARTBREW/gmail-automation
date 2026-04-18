@@ -6,106 +6,91 @@ await connectMongo();
 
 const campaignName = 'Animal Care';
 
-const aboutUsBlock = `<p><strong>About Animal Care</strong><br>
-Founded from a deep commitment to alleviating animal suffering, AnimalCare India is a nationally recognized animal welfare organization dedicated to creating compassionate communities where animals and people thrive together. Through our comprehensive program - including anti-rabies vaccination drives, emergency rescue operations, sterilization, and community education - we work toward India's goal of zero rabies deaths by 2030. Operating in alignment with WHO guidelines and Supreme Court directives, we've rescued and treated thousands of street animals while inspiring empathy across communities. At our core is the belief that every animal deserves dignity. Registered under the Prevention of Cruelty to Animals Act, 1960, and holding 12A, 80G, and CSR certifications, we're committed to evidence-based, humane solutions that protect both animal and human lives.</p>`;
-
-// Touchpoint 1: Initial email
-const firstTouchTemplates = {
-  1: `<p>Hi {recipientName},</p>
-<p>Did you know that India accounts for 36% of global rabies deaths, with over 18,000 lives lost annually? Yet the solution is scientifically proven: vaccinating just 70% of street dogs eliminates human rabies transmission entirely.</p>
-<p>Now imagine neighborhoods where children and street dogs coexist safely, where these loyal animals continue their role as natural community guardians. At Pawsitive Protectors, we believe this future is within reach, and with your help, we can make it happen.</p>
-<p>As a passionate volunteer for this cause, I'd like to invite you on behalf of Pawsitive Protectors to be an Ambassador for our anti-rabies vaccination drive. Your voice will help us protect both people and animals by vaccinating street dogs - creating safer communities while honoring these animals' dignity as the community protectors they truly are.</p>
-<p>Your leadership and influence will play a crucial role in spreading awareness and inspiring collective action. With your support, we can reach the critical 70% vaccination coverage needed to eliminate rabies deaths.</p>
-<p>Would you be open to a quick 5-minute call to explore how you could join as a Pawsitive Protectors Ambassador?</p>
-<p>Sincere regards,<br>
-<strong>{senderName}</strong><br>
-Pawsitive Protectors | Animal Care<br>
-Giving Circle Volunteer</p>
-${aboutUsBlock}`,
-};
+const footerBlock = `<p>Pawsitive Protectors | Animal Care<br>
+Animal Care is a registered and verified charity based out of India.<br>
+Reg No. 2023/16/IV/1478 | 80G: AAKTA4778M24DL02 | PAN: AAKTA4778M</p>`;
 
 const templates = {
-  ...firstTouchTemplates,
-  
-  // Touchpoint 2: First follow-up
-  2: `<p>Hi again {recipientName},</p>
-<p>I hope this message finds you well. Just checking in to see if you had a chance to look at my previous note on our anti-rabies vaccination initiative.</p>
-<p>Here's something that moved me: each vaccinated street dog protects 15-20 people daily in crowded urban areas. One animal, dozens of lives safeguarded - that's the multiplier effect of every single vaccination.</p>
-<p>Your willingness to support us as a "Pawsitive Protectors Ambassador" will help us scale this cascading impact across communities.</p>
-<p>Even a brief chat or a message of support would mean a lot.</p>
-<p>With Hope & Gratitude,<br>
-<strong>{senderName}</strong><br>
-Pawsitive Protectors | Animal Care<br>
-Giving Circle Volunteer</p>
-${aboutUsBlock}`,
+  1: `<p>Dear {recipientName},</p>
+<p>I'm {senderName}, a volunteer with Pawsitive Protectors - Animal Care's grassroots effort to vaccinate, deworm, and collar street dogs and cats, while caring for the sick and injured in our shelters. Protecting strays and communities, one neighbourhood at a time.</p>
+<p>I'm reaching out because I believe you care about the voiceless. People who've truly loved an animal tend to carry that beyond their homes - in the way they slow down for the dog at the gate, or pause for the one curled up on cold pavement. That kind of heart is rare. And it's exactly what this cause needs.</p>
+<p>India has a real shot at zero rabies deaths by 2030. The science is clear. The gap is people.</p>
+<p>I'd love to invite you to be a Pawsitive Protectors Ambassador - and share how your voice can help usher in that change.</p>
+<p>Would you be open to a brief conversation if this resonates? I'd love to share more.</p>
+<p>Warmly,<br>
+{senderName}</p>
+${footerBlock}`,
 
-  // Touchpoint 3: Second follow-up
-  3: `<p>{recipientName} – It's {senderName} reaching out again. I know you're busy, but I didn't want you to miss this opportunity to be part of a proven solution.</p>
-<p>The Supreme Court has issued clear directives on humane stray dog management, mandating vaccination and sterilization as the path forward. Our work directly supports these legal frameworks - offering communities the science-based approach that protects both people and animals with dignity.</p>
-<p>Your voice and influence could help neighborhoods embrace this evidence-based solution. Even a short conversation could make a big difference.</p>
-<p>Looking forward to hearing back from you.</p>
-<p>With Hope & Gratitude,<br>
-<strong>{senderName}</strong><br>
-Pawsitive Protectors | Animal Care<br>
-Giving Circle Volunteer</p>
-${aboutUsBlock}`,
+  2: `<p>Hey {recipientName},</p>
+<p>Hope you are doing great. I didn't want to send just another follow-up, so I thought I'd share something instead.</p>
+<p>Last Saturday, our team was out on the streets in Gurgaon. One of the dogs we vaccinated - a young female, skittish at first - sat completely still once she realised no one was going to hurt her. Our paravet said she'd probably never been touched with kindness before.</p>
+<p>She got her vaccine. She got a chew stick. She went back to her corner of the street, a little safer than before.</p>
+<p>That's what Pawsitive Protectors does, one animal at a time. And that's what your voice as an Ambassador could help us do at scale.</p>
+<p>We are so much looking forward to speaking with you if this is something you'd like to take forward.</p>
+<p>With hope,<br>
+{senderName}</p>
+${footerBlock}`,
 
-  // Touchpoint 4: Third follow-up
-  4: `<p>Hi {recipientName},</p>
-<p>Greetings! India has set an ambitious target: zero rabies deaths by 2030. We're just five years away, and achieving this requires urgent community action now.</p>
-<p>What inspired me to lead these vaccination drives? Learning that we're not asking for the impossible - the WHO confirms that 70% dog vaccination coverage completely eliminates human rabies transmission. It's mathematically achievable, scientifically proven, and ensures street dogs can continue their natural role as community guardians safely.</p>
-<p>We can't do this without partners like you and hence my persistence.</p>
-<p>A quick yes from you will help us bring protection to another neighborhood of families - and dignity to the dogs who serve them.</p>
-<p>Hoping to hear back from you.</p>
-<p><strong>{senderName}</strong><br>
-Pawsitive Protectors | Animal Care<br>
-Giving Circle Volunteer</p>
-${aboutUsBlock}`,
+  3: `<p>Dear {recipientName},</p>
+<p>Sharing a few facts I think you'd want to know:</p>
+<p>India accounts for roughly 36% of all rabies deaths globally. Nearly all of them are preventable. The science is settled - vaccinate 70% of a street dog population and human transmission stops.</p>
+<p>The barrier isn't resources. It isn't willpower. It's awareness - and the credible voices willing to carry it.</p>
+<p>That's why I keep thinking of you. An Ambassador like you can make all the difference.</p>
+<p>Would you give me a couple of minutes to share what that looks like in practice?</p>
+<p>Warmly,<br>
+{senderName}</p>
+${footerBlock}`,
 
-  // Touchpoint 5: Fourth follow-up
-  5: `<p>Hi again {recipientName}, I have a happy update to share. With support from noble Pawsitive Protectors Ambassadors, we've vaccinated 7000+ street dogs across multiple communities - and we're expanding weekly.</p>
-<p>The response has been truly inspiring! Feeders and community members are seeing firsthand how vaccination strengthens the bond between neighborhoods and their street dogs. These animals continue watching over local areas, now with the health protection they deserve.</p>
-<p>Your involvement could help us scale this impact toward the critical threshold needed for rabies elimination.</p>
-<p>Together, we can make rabies deaths a thing of the past while ensuring street dogs remain valued community members.</p>
-<p>A YES from you will be a huge support.</p>
-<p>With Hope & Gratitude,<br>
-<strong>{senderName}</strong><br>
-Pawsitive Protectors | Animal Care<br>
-Giving Circle Volunteer</p>
-${aboutUsBlock}`,
+  4: `<p>Dear {recipientName},</p>
+<p>I realise I've been asking for a "yes" without painting a clear picture of what you're saying yes to. Let me address that.</p>
+<p>Being a Pawsitive Protectors Ambassador means three things - and only as much as feels right to you:</p>
+<p>1. Show your love - As an ambassador who believes in the cause<br>
+2. Share - a post, a story, a moment from our drives with your network.<br>
+3. Attend - a vaccination drive, once in a while, if you'd like to see the work firsthand.</p>
+<p>That's it. We do not seek any commitments, just your willingness to drive meaningful change.</p>
+<p>I'd love to walk you through it. Let me know.</p>
+<p>Best regards,<br>
+{senderName}</p>
+${footerBlock}`,
 
-  // Touchpoint 6: Fifth follow-up
-  6: `<p>{recipientName}, I hope you are doing well.</p>
-<p>Thank you for staying with me through these messages - it means a lot. As we move deeper into winter, our drives now include coats and blankets for vulnerable street animals alongside vaccinations - because protecting community health means caring for the loyal animals who watch over us.</p>
-<p>I completely understand how busy schedules can get, but even a quick reply saying "interested" or "tell me more" would mean the world to us.</p>
-<p>With sincere regards,<br>
-<strong>{senderName}</strong><br>
-Pawsitive Protectors | Animal Care<br>
-Giving Circle Volunteer</p>
-${aboutUsBlock}`,
+  5: `<p>Dear {recipientName},</p>
+<p>I thought you might like to know who else has said yes.</p>
+<p>A senior professional in Mumbai - "I've fed strays outside my office for years. This felt like finally doing something that lasts."</p>
+<p>A parent in Gurgaon - "I wanted my kids to see what responsible citizenship looks like."</p>
+<p>A pet owner in Noida - "My dog lives indoors. The ones outside deserve the same protection."</p>
+<p>They are the heroes and protectors of the voiceless. PAWSITIVE PROTECTORS</p>
+<p>I hope I'm not being a bother - do let me know if you'd prefer I stop writing, and I'll respect that completely.</p>
+<p>With gratitude & hope,<br>
+{senderName}</p>
+${footerBlock}`,
 
-  // Touchpoint 7: Final follow-up
-  7: `<p>Hi {recipientName},</p>
-<p>This will be my final note, and I wanted to keep it heartfelt.</p>
-<p>Every two hours, someone in India dies from rabies - not because solutions don't exist, but because we haven't reached the vaccination coverage that science proves eliminates transmission.</p>
-<p>I reached out because I genuinely believe you have both the platform and the heart to help change this. I understand timing isn't always right, but I hope this cause stays with you.</p>
-<p>Whenever you feel ready to help protect communities while honoring street dogs with the care they deserve - whether that's now or in the future - my inbox will be open.</p>
-<p>Until then, you're welcome to follow our work at <a href="https://www.instagram.com/pawsitiveprotectors/">https://www.instagram.com/pawsitiveprotectors/</a>.</p>
-<p>Thank you so much for taking the time to read this.</p>
-<p><strong>{senderName}</strong><br>
-Pawsitive Protectors | Animal Care<br>
-Giving Circle Volunteer</p>
-${aboutUsBlock}`,
+  6: `<p>Hello {recipientName},</p>
+<p>We have a vaccination drive coming up in Gurgaon next Saturday.</p>
+<p>Our team typically vaccinates 30 - 150 stray dogs in a day. It would really mean something to our team to go into that day knowing you are supporting us.</p>
+<p>If there's a moment to say yes, this might be it. Not because the door closes after - it doesn't - but because every drive is a small deadline the animals on those streets are counting on.</p>
+<p>I'd be grateful to hear back from you.</p>
+<p>With best regards,<br>
+{senderName}</p>
+${footerBlock}`,
+
+  7: `<p>Dear {recipientName},</p>
+<p>I won't keep showing up in your inbox - I know your time is genuinely valuable and I respect that.</p>
+<p>I'll just say this: India's 2030 goal is real, and I would like you to play your part in it. The animals on the streets of this country are real. And the few people who choose to stand alongside - they matter more than they know.</p>
+<p>If this ever feels like the right moment, we'll be here. You know where to find me.</p>
+<p>Thank you for reading.</p>
+<p>With warm regards,<br>
+{senderName}</p>
+${footerBlock}`,
 };
 
 const subjectLines = {
-  1: 'Join Pawsitive Protectors: Eliminate Rabies Deaths Together',
-  2: 'Re: Join Pawsitive Protectors: Eliminate Rabies Deaths Together',
-  3: 'Re: Join Pawsitive Protectors: Eliminate Rabies Deaths Together',
-  4: 'Re: Join Pawsitive Protectors: Eliminate Rabies Deaths Together',
-  5: 'Re: Join Pawsitive Protectors: Eliminate Rabies Deaths Together',
-  6: 'Re: Join Pawsitive Protectors: Eliminate Rabies Deaths Together',
-  7: 'Re: Join Pawsitive Protectors: Eliminate Rabies Deaths Together',
+  1: 'Invitation to become a Pawsitive Protectors Ambassador',
+  2: 'Following up: Pawsitive Protectors Ambassador invitation',
+  3: 'A quick note on India\'s rabies-free 2030 goal',
+  4: 'What being a Pawsitive Protectors Ambassador means',
+  5: 'Who has already said yes',
+  6: 'Vaccination drive this Saturday in Gurgaon',
+  7: 'Final note from Pawsitive Protectors',
 };
 
 // Delete existing templates

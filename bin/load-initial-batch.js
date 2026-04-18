@@ -112,8 +112,9 @@ async function main() {
         // Use case-insensitive replace to handle any casing issues
         body = body.replace(/{recipientName}/gi, finalRecipientName);
       } else {
-        // If no name, replace "Dear {recipientName}," with "Hello,"
+        // If no name, replace greeting + placeholder with "Hello,"
         body = body.replace(/Dear\s+{recipientName},/gi, 'Hello,');
+        body = body.replace(/Hi\s+{recipientName},/gi, 'Hello,');
         // Remove any remaining {recipientName} placeholders
         body = body.replace(/{recipientName}/gi, '');
       }

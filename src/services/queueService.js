@@ -522,6 +522,7 @@ export async function processOutboxOnce() {
                 emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
               } else {
                 emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
+                emailBody = emailBody.replace(/Hi\s+{recipientName},/gi, 'Hello,');
                 emailBody = emailBody.replace(/{recipientName}/gi, '');
               }
               const senderName = getAccountDisplayName(job.from) || '';
@@ -561,6 +562,7 @@ export async function processOutboxOnce() {
                     emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
                   } else {
                     emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
+                    emailBody = emailBody.replace(/Hi\s+{recipientName},/gi, 'Hello,');
                     emailBody = emailBody.replace(/{recipientName}/gi, '');
                   }
                   const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';

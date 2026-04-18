@@ -163,7 +163,9 @@ async function main() {
       if (recipientName) {
         body = body.replace(/{recipientName}/g, recipientName);
       } else {
-        body = body.replace(/Dear {recipientName},/g, 'Hello,').replace(/{recipientName}/g, '');
+        body = body.replace(/Dear {recipientName},/g, 'Hello,');
+        body = body.replace(/Hi {recipientName},/g, 'Hello,');
+        body = body.replace(/{recipientName}/g, '');
       }
       const senderName = c.displayName || getAccountDisplayName(c.from) || '';
       body = body.replace(/{senderName}/g, senderName);

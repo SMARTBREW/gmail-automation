@@ -276,7 +276,6 @@ export async function checkThreadForReply({ fromEmail, threadId, recipientEmail 
     };
 
     const ourFrom = (fromEmail || '').toLowerCase();
-    const expectedReplyFrom = (recipientEmail || '').toLowerCase();
 
     for (const message of messages) {
       const headersArr = message.payload?.headers || [];
@@ -285,14 +284,15 @@ export async function checkThreadForReply({ fromEmail, threadId, recipientEmail 
       const autoSubmitted = (headers['Auto-Submitted'] || '').toLowerCase();
       const precedence = (headers['Precedence'] || '').toLowerCase();
       const fromAddr = normalizeEmail(fromHeader);
+      // Skip messages sent by our own sender account
       if (fromAddr.includes(ourFrom)) continue;
+      // Skip automated responses (out-of-office, bounce, bulk, etc.)
       if (autoSubmitted && autoSubmitted !== 'no') continue;
       if (precedence && (precedence.includes('bulk') || precedence.includes('junk') || precedence.includes('auto_reply'))) continue;
-      if (expectedReplyFrom) {
-        if (fromAddr === expectedReplyFrom) return true;
-        continue;
-      }
-      if (fromAddr && !fromAddr.includes(ourFrom)) return true;
+      // Any human reply in the thread counts — regardless of which address replied.
+      // This fixes the case where recipient replies from a different address
+      // (e.g. sent to team@domain.com but reply comes from ceo@domain.com).
+      if (fromAddr) return true;
     }
     return false;
   } catch (error) {

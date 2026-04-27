@@ -80,7 +80,7 @@ The Giving Circle</p>`,
 <p>So today, we simply want to ask: Will you be a Champion for Shukrana?</p>
 <p>Here's what it looks like in practice:</p>
 <p>→ Step 1: We send you the Brick by Brick campaign message - tailored, ready to share.<br>
-→ Step 2: You forward it to 5–10 people in your network who love animals.<br>
+→ Step 2: You forward it to 5-10 people in your network who love animals.<br>
 → Step 3: You let us know how it goes. We take care of everything else.</p>
 <p>That's the whole ask. One round of messages. A few minutes of your time.</p>
 <p>And the ripple from that? If even 3 people from your circle donate ₹2,000 each - that's 600 bricks in the wall of Shukrana. Bricks that will stand long after the campaign ends.</p>

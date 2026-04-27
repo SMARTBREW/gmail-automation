@@ -13,11 +13,11 @@ const templates = {
 <p>I volunteer with Joint Women's Programme, an NGO that's worked on women's rights in India since 1977. I'm writing about our Wings of Hope campaign and wondered if you'd be open to hearing more.</p>
 <p>The problem: an estimated 23 million girls in India drop out of school each year once they start menstruating - no pads, no information, a lot of shame. That's the equivalent of a classroom of 40 girls, every minute.</p>
 <p>Wings of Hope have been in government schools across Delhi, Haryana, UP, Uttarakhand, Jharkhand, Telangana, and Karnataka. We provide reusable cloth pads, menstrual health education, and counselling, so girls stay in class.</p>
-<p>I'm reaching out because I'd love for you to join as a Wings of Hope Ambassador — someone lending their voice to help more girls stay in school.</p>
+<p>I'm reaching out because I'd love for you to join as a Wings of Hope Ambassador - someone lending their voice to help more girls stay in school.</p>
 <p>If any of this resonates, even a short "tell me more" would mean a lot. Happy to jump on a call whenever it works.</p>
 <p>Warmly,<br>
 {senderName}<br>
-Wings of Hope • Joint Women's Programme<br>
+Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 
   2: `<p>Hi {recipientName},</p>
@@ -25,7 +25,7 @@ Giving Circle Volunteer</p>`,
 <p>No pressure, just didn't want my earlier note to slip by unseen.</p>
 <p>Warmly,<br>
 {senderName}<br>
-Wings of Hope • Joint Women's Programme<br>
+Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 
   3: `<p>Hi {recipientName},</p>
@@ -37,7 +37,7 @@ Giving Circle Volunteer</p>`,
 <p>Does this sound like something you'd be up for?</p>
 <p>Warmly,<br>
 {senderName}<br>
-Wings of Hope • Joint Women's Programme<br>
+Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 
   4: `<p>Hi {recipientName},</p>
@@ -47,7 +47,7 @@ Giving Circle Volunteer</p>`,
 <p>If joining as a Wings of Hope Ambassador feels right, we'd love to have you help us reach more girls.</p>
 <p>Warmly,<br>
 {senderName}<br>
-Wings of Hope • Joint Women's Programme<br>
+Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 
   5: `<p>Hi {recipientName},</p>
@@ -59,7 +59,7 @@ Giving Circle Volunteer</p>`,
 <p>Thanks for reading this far - either way, it's appreciated.</p>
 <p>With gratitude,<br>
 {senderName}<br>
-Wings of Hope • Joint Women's Programme<br>
+Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 
   6: `<p>Hi {recipientName},</p>
@@ -68,7 +68,7 @@ Giving Circle Volunteer</p>`,
 <p>That's why I keep asking. Lending your voice as a Wings of Hope Ambassador would help this change stick.</p>
 <p>Warmly,<br>
 {senderName}<br>
-Wings of Hope • Joint Women's Programme<br>
+Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 
   7: `<p>Hi {recipientName},</p>
@@ -77,7 +77,7 @@ Giving Circle Volunteer</p>`,
 <p>If you ever want to come back to this - as an Ambassador, a donor, or a quiet well-wisher - my inbox stays open. You can also follow along at <a href="https://www.instagram.com/wingsofhope.india/">@wingsofhope.india</a>.</p>
 <p>Wishing you well,<br>
 {senderName}<br>
-Wings of Hope • Joint Women's Programme<br>
+Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 };
 
@@ -100,7 +100,7 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log(`   - 7 touchpoint templates (1 initial + follow-ups 2–7)`);
+console.log(`   - 7 touchpoint templates (1 initial + follow-ups 2-7)`);
 console.log(`   - Subject (touchpoint 1): "${baseSubject}"`);
 console.log(`   - Follow-up subjects use Re: + original first-email subject (enqueue-followups.js)`);
 console.log(``);

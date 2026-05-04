@@ -17,83 +17,75 @@ Campaign page link: <a href="www.khushii.org/pads-for-freedom">www.khushii.org/p
 Campaign Instagram link: <a href="www.instagram.com/pads4freedom">www.instagram.com/pads4freedom</a></p>`;
 
 const templates = {
-  // Touchpoint 1: Initial email
   1: `<p>Dear {recipientName},</p>
-<p>Every year in India, nearly <strong>23 million girls</strong> drop out of school - not because they don't want to study, but because they don't have access to sanitary pads.</p>
-<p>I read this some time ago, and it stopped me in my tracks.</p>
-<p>I'm a volunteer with Pads for Freedom, a campaign working to ensure that a girl's education is never interrupted because of her period. We do this by providing safe, disposable, biodegradable sanitary pads, along with counselling sessions that replace shame with understanding.</p>
-<p>I'm reaching out because people like you - thoughtful, respected, and influential in your own circles - can help change this quietly but powerfully.</p>
-<p>Would you be open to exploring an inspiring role as a <strong>Pads for Freedom Cause Champion</strong>?</p>
+<p>Each year in India, nearly <strong>23 million girls</strong> leave school - not because they want to, but because they lack access to something as basic as sanitary pads.</p>
+<p>When I first came across this, it stayed with me.</p>
+<p>I volunteer with Pads for Freedom, an initiative working to ensure that no girl's education is disrupted by her period. Alongside providing safe, biodegradable sanitary pads, we also run counselling sessions that replace silence and stigma with awareness and confidence.</p>
+<p>I'm reaching out because people like you - respected, thoughtful, and influential in your circles - can help shift this reality in a meaningful way.</p>
+<p>Would you be open to exploring a role as a <strong>Pads for Freedom Cause Champion</strong>?</p>
 <p>Warmly,<br>
 <strong>{senderName}</strong><br>
 Volunteer | Pads for Freedom<br>
 KHUSHII NGO</p>
 ${aboutUsBlock}`,
 
-  // Touchpoint 2: First follow-up
   2: `<p>Dear {recipientName},</p>
-<p>I hope you're doing well.</p>
-<p>I wanted to gently follow up on my previous note. Causes like Pads for Freedom grow not through noise, but through people who pause, reflect, and choose to care.</p>
-<p>Being a <strong>Cause Champion</strong> doesn't require large commitments, it's simply lending your voice so <strong>the right conversations begin in the right places</strong>.</p>
-<p>If this feels aligned, I'd love to share more whenever it's convenient for you.</p>
+<p>I just wanted to gently follow up on my previous message.</p>
+<p>Movements like Pads for Freedom don't grow through noise - they grow through individuals who choose to care, and act in their own way.</p>
+<p>Being a <strong>Cause Champion</strong> doesn't demand large commitments. Often, it simply begins with lending your voice and helping start the right conversations.</p>
+<p>If this resonates even a little, I'd be happy to share more at a time convenient for you.</p>
 <p>Warm regards,<br>
 <strong>{senderName}</strong><br>
 Volunteer | Pads for Freedom<br>
 KHUSHII NGO</p>`,
 
-  // Touchpoint 3: Second follow-up
   3: `<p>Hi {recipientName},</p>
-<p>One thing I've learned as a volunteer is this:</p>
-<p><strong>The absence of a sanitary pad often brings absence from school</strong>, low confidence, and lost opportunities.</p>
-<p>Pads for Freedom doesn't just distribute sanitary pads - we create <strong>safe spaces where girls can ask questions, understand their bodies, and feel normal</strong> about something entirely natural.</p>
-<p>When someone becomes a <strong>Cause Champion</strong>, they help normalise these conversations - at home, at work, online, or among friends.</p>
-<p>Would you be open to a short conversation to take it forward?</p>
+<p>One thing volunteering here has made very clear to me: When a girl doesn't have access to sanitary pads, it often means missed school days, loss of confidence, and, over time, missed opportunities.</p>
+<p>Pads for Freedom goes beyond distribution - we create safe spaces where girls can ask questions, understand their bodies, and feel comfortable with something entirely natural.</p>
+<p>As a <strong>Cause Champion</strong>, you help normalise these conversations - in homes, workplaces, and communities.</p>
+<p>Would you be open to a short conversation to explore this further?</p>
 <p>With warmth,<br>
 <strong>{senderName}</strong><br>
 Volunteer | Pads for Freedom<br>
 KHUSHII NGO</p>`,
 
-  // Touchpoint 4: Third follow-up
   4: `<p>Hello {recipientName},</p>
-<p>I wanted to share a small but happy update from the ground.</p>
-<p>Our team conducted a <strong>menstrual health counselling and pad distribution drive</strong> with schoolgirls - full of shy smiles, curious questions, and visible relief.</p>
-<p>(I've attached a photo from the session - it captures the spirit far better than words.)</p>
-<p>Support from <strong>Cause Champions</strong> makes moments like these possible.</p>
-<p>If this small glimpse resonates with you, I'd love to have a brief conversation and share how moments like these become possible.</p>
+<p>I wanted to share a small moment from the ground.</p>
+<p>Recently, we conducted a menstrual health session with schoolgirls - what began with hesitation slowly turned into questions, smiles, and a visible sense of ease.</p>
+<p>It's moments like these that remind us how much change is possible.</p>
+<p>Support from <strong>Cause Champions</strong> is what enables these interactions to happen.</p>
+<p>If this resonates with you, I'd love to share how you could be a part of creating more such moments.</p>
 <p>Warmly,<br>
 <strong>{senderName}</strong><br>
 Volunteer | Pads for Freedom<br>
 KHUSHII NGO</p>`,
 
-  // Touchpoint 5: Fourth follow-up
   5: `<p>Dear {recipientName},</p>
-<p>Being a <strong>Pads for Freedom Cause Champion</strong> could be as simple as:</p>
-<p>• <strong>Sharing your views</strong> on the problem within your network<br>
-• Supporting the cause with a fundraiser <strong>without any financial liability</strong><br>
-• Helping more people understand why <strong>menstrual dignity matters</strong></p>
-<p>There's nothing more required - just authenticity and belief.</p>
-<p>If this aligns with how you like to support Pads for Freedom, perhaps we could talk briefly about what that could look like.</p>
+<p>Becoming a <strong>Pads for Freedom Cause Champion</strong> is simple and flexible. It could mean:</p>
+<p>• Speaking about the issue within your network<br>
+• Starting a fundraiser - without any personal financial obligation<br>
+• Helping more people understand why menstrual dignity matters</p>
+<p>There's no fixed template - just your voice, your authenticity, and your belief in the cause.</p>
+<p>If this feels like something you'd like to do, could we find a few minutes to discuss what it might look like for you?</p>
 <p>Best,<br>
 <strong>{senderName}</strong><br>
 Volunteer | Pads for Freedom<br>
 KHUSHII NGO</p>`,
 
-  // Touchpoint 6: Fifth follow-up
   6: `<p>Dear {recipientName},</p>
-<p>I hope you've been well.</p>
-<p>I wanted to reach out one last time before I pause - simply to say thank you for taking the time to read my messages. I know how full inboxes and days can be.</p>
-<p>If Pads for Freedom is something you'd like to explore further, even briefly, I'd really value hearing from you. And if <strong>now isn't the right moment</strong>, that's completely understandable too.</p>
-<p>Either way, I'm grateful for your <strong>openness and the space</strong> you've given this cause.</p>
+<p>I hope you've been well. I wanted to reach out once more before pausing, and to thank you for taking the time to read my messages - I know how full days can get.</p>
+<p>If Pads for Freedom is something you'd like to explore, even briefly, I'd truly value connecting.</p>
+<p>And if now isn't the right time, I completely understand.</p>
+<p>Thank you again for your time and consideration.</p>
 <p>Warm wishes,<br>
 <strong>{senderName}</strong><br>
 Volunteer | Pads for Freedom<br>
 KHUSHII NGO</p>`,
 
-  // Touchpoint 7: Final follow-up
   7: `<p>Dear {recipientName},</p>
-<p>Thank you once again for the time and attention you've given to these notes.</p>
-<p>I'll step back after this, but I wanted you to know that <strong>the invitation remains open</strong>. If at any point you'd like to support girls staying in school through Pads for Freedom - whether as a <strong>Cause Champion</strong> or simply as a <strong>well-wisher</strong> - I'd be very happy to reconnect.</p>
-<p>Until then, thank you for your openness, and for the work you already do to make the world a little more equitable.</p>
+<p>Thank you once again for your time and attention. I'll step back after this, but the invitation remains open.</p>
+<p>If at any point you'd like to support girls in continuing their education through Pads for Freedom - as a Cause Champion or in any other way - I'd be glad to reconnect.</p>
+<p>Until then, thank you for all that you already do to make the world a little more equal.</p>
 <p>With warm regards,<br>
 <strong>{senderName}</strong><br>
 Volunteer | Pads for Freedom<br>
@@ -110,10 +102,8 @@ const subjectLines = {
   7: 'Re: 23 million girls. One preventable reason.',
 };
 
-// Delete existing templates
 await CampaignTemplate.deleteMany({ campaignName });
 
-// Create new template
 await CampaignTemplate.create({
   campaignName,
   templates,
@@ -121,12 +111,7 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log(`   - 7 touchpoint templates`);
-console.log(`   - 7 subject lines (one for each touchpoint)`);
-console.log(``);
-console.log(`Templates use placeholders:`);
-console.log(`   {recipientName} - Will be replaced with actual recipient name (or removed if empty)`);
-console.log(`   {senderName} - Will be replaced with sender's display name from config.json`);
-console.log(``);
-
+console.log(`   - 7 touchpoint templates (replaced previous)`);
+console.log(`   - Subject line touchpoint 1: ${subjectLines[1]}`);
+console.log(`   - Placeholders: {recipientName}, {senderName}`);
 process.exit(0);

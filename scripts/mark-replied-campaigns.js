@@ -5,7 +5,8 @@ dotenv.config();
 import { connectMongo } from '../src/db/mongo.js';
 import { Campaign } from '../src/models/Campaign.js';
 import { Outbox } from '../src/models/Outbox.js';
-import { checkThreadForReply } from '../src/services/gmailService.js';
+import { checkThreadForReply, getLatestHumanReply } from '../src/services/gmailService.js';
+import { markRepliedWithDetails } from '../src/services/campaignDbService.js';
 
 async function main() {
   await connectMongo();
@@ -35,8 +36,11 @@ async function main() {
       
       if (hasReply) {
         hasReplies++;
-        // Mark campaign as replied
-        await Campaign.findByIdAndUpdate(campaign._id, { replied: true });
+        const reply = await getLatestHumanReply({
+          fromEmail: campaign.from,
+          threadId: campaign.threadId,
+        });
+        await markRepliedWithDetails({ campaignId: campaign._id, reply });
         markedAsReplied++;
         
         console.log(`✅ ${campaign.to}: Found reply, marked as replied`);

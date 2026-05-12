@@ -311,6 +311,63 @@ export async function checkThreadForReply({ fromEmail, threadId, recipientEmail 
   }
 }
 
+export async function getLatestHumanReply({ fromEmail, threadId }) {
+  try {
+    const account = getAccountByEmail(fromEmail);
+    const gmail = getGmailClient(account.email, account.refreshToken);
+    const thread = await gmail.users.threads.get({ userId: 'me', id: threadId, format: 'full' });
+    const messages = thread.data.messages || [];
+
+    const normalizeEmail = (fromHeader) => {
+      if (!fromHeader) return '';
+      const m = fromHeader.match(/<([^>]+)>/);
+      const addr = (m ? m[1] : fromHeader).trim();
+      return addr.toLowerCase();
+    };
+
+    const ourFrom = (fromEmail || '').toLowerCase();
+
+    for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
+      const message = messages[idx];
+      const headersArr = message.payload?.headers || [];
+      const headers = Object.fromEntries(headersArr.map(h => [h.name, h.value]));
+      const fromHeader = headers['From'] || '';
+      const autoSubmitted = (headers['Auto-Submitted'] || '').toLowerCase();
+      const precedence = (headers['Precedence'] || '').toLowerCase();
+      const fromAddr = normalizeEmail(fromHeader);
+
+      if (fromAddr.includes(ourFrom)) continue;
+      if (autoSubmitted && autoSubmitted !== 'no') continue;
+      if (precedence && (precedence.includes('bulk') || precedence.includes('junk') || precedence.includes('auto_reply'))) continue;
+      if (!fromAddr) continue;
+
+      const dateMs = Date.parse(headers['Date'] || '');
+      const parsedDate = Number.isFinite(dateMs) ? new Date(dateMs) : new Date();
+
+      return {
+        fromHeader,
+        fromEmail: fromAddr,
+        subject: headers['Subject'] || '',
+        date: parsedDate,
+        snippet: message.snippet || '',
+        body: message.payload ? extractEmailBody(message.payload) : '',
+        gmailMessageId: message.id || '',
+      };
+    }
+
+    return null;
+  } catch (error) {
+    const errorMsg = error.message || String(error);
+    if (errorMsg.includes('oauth2') || errorMsg.includes('token') || errorMsg.includes('400') || errorMsg.includes('Bad Request') || error?.response?.status === 400) {
+      console.error(`❌ OAuth2 token error for account ${fromEmail} when fetching reply for thread ${threadId}:`, errorMsg);
+      console.error(`   💡 This account may need a new refresh token. Run: npm run generate-token`);
+    } else {
+      console.error(`Error fetching latest reply for thread ${threadId} from ${fromEmail}:`, errorMsg);
+    }
+    throw error;
+  }
+}
+
 export async function listNoReplyThreads({ fromEmail, days = 3 }) {
   const account = getAccountByEmail(fromEmail);
   // Use cached Gmail client (permanent optimization)

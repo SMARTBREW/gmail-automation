@@ -5,7 +5,8 @@ dotenv.config();
 import { connectMongo } from '../src/db/mongo.js';
 import { Campaign } from '../src/models/Campaign.js';
 import { Outbox } from '../src/models/Outbox.js';
-import { checkThreadForReply } from '../src/services/gmailService.js';
+import { checkThreadForReply, getLatestHumanReply } from '../src/services/gmailService.js';
+import { markRepliedWithDetails } from '../src/services/campaignDbService.js';
 
 const email = process.argv[2];
 
@@ -93,7 +94,11 @@ async function main() {
           
           // Offer to fix it
           console.log('💡 Fixing this now...');
-          await Campaign.findByIdAndUpdate(campaign._id, { replied: true });
+          const reply = await getLatestHumanReply({
+            fromEmail: campaign.from,
+            threadId: campaign.threadId,
+          });
+          await markRepliedWithDetails({ campaignId: campaign._id, reply });
           
           // Cancel pending follow-ups
           const cancelled = await Outbox.updateMany(

@@ -17,6 +17,13 @@ const CampaignSchema = new mongoose.Schema(
     internetMessageId: { type: String },
     allInternetMessageIds: { type: [String], default: [] },
     lastReplyCheck: { type: Date, index: true }, // Track when we last checked for replies
+    repliedAt: { type: Date, index: true },
+    replyFrom: { type: String },
+    replyEmail: { type: String, index: true },
+    replySubject: { type: String },
+    replySnippet: { type: String },
+    replyBody: { type: String },
+    replyMessageId: { type: String },
   },
   { 
     timestamps: true,

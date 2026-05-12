@@ -399,15 +399,20 @@ export async function processOutboxOnce() {
         // SECOND CHECK: Gmail API - backup check in case polling service failed
         // This is a safety net if the cron job fails or hasn't run yet
         try {
-          const { checkThreadForReply } = await import('./gmailService.js');
+          const { checkThreadForReply, getLatestHumanReply } = await import('./gmailService.js');
+          const { markRepliedWithDetails } = await import('./campaignDbService.js');
           const hasReply = await checkThreadForReply({
             fromEmail: job.from,
             threadId: job.headers?.threadId || campaign.threadId,
             recipientEmail: job.to,
           });
           if (hasReply) {
+            const reply = await getLatestHumanReply({
+              fromEmail: job.from,
+              threadId: job.headers?.threadId || campaign.threadId,
+            });
             // Mark campaign as replied and skip sending (polling service may have failed)
-            await Campaign.findByIdAndUpdate(job.campaignRef.campaignId, { replied: true });
+            await markRepliedWithDetails({ campaignId: job.campaignRef.campaignId, reply });
             await Outbox.findByIdAndUpdate(job._id, { 
               $set: { status: 'sent' }
             });

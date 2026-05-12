@@ -8,7 +8,7 @@ import {
   getNextAccount,
   sendEmail,
   getThreadSummary,
-  checkThreadForReply,
+  getLatestHumanReply,
   getAccountDisplayName,
 } from '../services/gmailService.js';
 import {
@@ -17,6 +17,7 @@ import {
   advanceTouchpoint,
   getUnrepliedCampaigns,
   getTemplateForCampaign,
+  markRepliedWithDetails,
 } from '../services/campaignDbService.js';
 import { enqueueInitial, enqueueFollowup, processOutboxOnce, cleanupOldBodies } from '../services/queueService.js';
 import { Outbox } from '../models/Outbox.js';
@@ -110,12 +111,12 @@ const tools = [
       const ready = await campaignsReadyForFollowup(testMode);
       const results = [];
       for (const c of ready) {
-        const replied = await checkThreadForReply({
+        const reply = await getLatestHumanReply({
           fromEmail: c.from,
           threadId: c.threadId,
-          recipientEmail: c.to,
         });
-        if (replied) {
+        if (reply) {
+          await markRepliedWithDetails({ campaignId: c._id, reply });
           results.push({ id: c._id, to: c.to, status: 'replied' });
           continue;
         }
@@ -175,14 +176,12 @@ const tools = [
       const unreplied = await getUnrepliedCampaigns();
       let repliedCount = 0;
       for (const c of unreplied) {
-        const hasReply = await checkThreadForReply({
+        const reply = await getLatestHumanReply({
           fromEmail: c.from,
           threadId: c.threadId,
-          recipientEmail: c.to,
         });
-        if (hasReply) {
-          const { Campaign } = await import('../models/Campaign.js');
-          await Campaign.findByIdAndUpdate(c._id, { replied: true });
+        if (reply) {
+          await markRepliedWithDetails({ campaignId: c._id, reply });
           repliedCount++;
         }
       }

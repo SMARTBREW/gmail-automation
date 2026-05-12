@@ -17,7 +17,8 @@ import { connectMongo } from '../db/mongo.js';
 import { Campaign } from '../models/Campaign.js';
 import { Outbox } from '../models/Outbox.js';
 import { getAccountByEmail, getGmailClient } from './gmailService.js';
-import { checkThreadForReply } from './gmailService.js';
+import { checkThreadForReply, getLatestHumanReply } from './gmailService.js';
+import { markRepliedWithDetails } from './campaignDbService.js';
 
 /**
  * Start watching Gmail for new messages (replies)
@@ -119,8 +120,13 @@ export async function processGmailNotification(email, historyId) {
             });
             
             if (hasReply) {
-              // Mark campaign as replied
-              await Campaign.findByIdAndUpdate(campaign._id, { replied: true });
+              const reply = await getLatestHumanReply({
+                fromEmail: email,
+                threadId,
+              });
+
+              // Mark campaign as replied and save reply details
+              await markRepliedWithDetails({ campaignId: campaign._id, reply });
               markedAsReplied++;
               
               // Cancel pending follow-ups
@@ -247,8 +253,13 @@ export async function pollForReplies(email, limit = 200) {
         });
         
         if (hasReply) {
-          // Mark campaign as replied
-          await Campaign.findByIdAndUpdate(campaign._id, { replied: true });
+          const reply = await getLatestHumanReply({
+            fromEmail: email,
+            threadId: campaign.threadId,
+          });
+
+          // Mark campaign as replied and save reply details
+          await markRepliedWithDetails({ campaignId: campaign._id, reply });
           markedAsReplied++;
           
           // Cancel pending follow-ups

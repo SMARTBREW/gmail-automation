@@ -104,9 +104,14 @@ async function main() {
         });
           
         if (hasReply) {
-            // Mark campaign as replied immediately
-            const { Campaign } = await import('../src/models/Campaign.js');
-          await Campaign.findByIdAndUpdate(c._id, { replied: true });
+            // Mark campaign as replied immediately and save reply details
+            const { getLatestHumanReply } = await import('../src/services/gmailService.js');
+            const { markRepliedWithDetails } = await import('../src/services/campaignDbService.js');
+            const reply = await getLatestHumanReply({
+              fromEmail: c.from,
+              threadId: c.threadId,
+            });
+            await markRepliedWithDetails({ campaignId: c._id, reply });
             
             // Cancel any existing pending follow-ups
             await Outbox.updateMany(

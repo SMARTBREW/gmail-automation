@@ -80,7 +80,25 @@ export async function createCampaignRecord({
 }
 
 export async function markReplied({ campaignId }) {
-  await Campaign.findByIdAndUpdate(campaignId, { replied: true });
+  await Campaign.findByIdAndUpdate(campaignId, { replied: true, repliedAt: new Date() });
+}
+
+export async function markRepliedWithDetails({ campaignId, reply }) {
+  const update = {
+    replied: true,
+    repliedAt: reply?.date || new Date(),
+  };
+
+  if (reply) {
+    update.replyFrom = reply.fromHeader || reply.fromEmail || '';
+    update.replyEmail = reply.fromEmail || '';
+    update.replySubject = reply.subject || '';
+    update.replySnippet = reply.snippet || '';
+    update.replyBody = reply.body || '';
+    update.replyMessageId = reply.gmailMessageId || '';
+  }
+
+  await Campaign.findByIdAndUpdate(campaignId, { $set: update });
 }
 
 export async function campaignsReadyForFollowup(testMode = false) {

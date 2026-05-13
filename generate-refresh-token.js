@@ -7,7 +7,7 @@ dotenv.config();
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/gmail.settings.basic',
-  'https://www.googleapis.com/auth/gmail.metadata',
+  'https://www.googleapis.com/auth/gmail.readonly',
 ];
 
 const REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob';
@@ -23,7 +23,8 @@ console.log('This script will help you generate a refresh token with the require
 console.log('\nRequired scopes:');
 console.log('  ✓ gmail.send (for sending emails)');
 console.log('  ✓ gmail.settings.basic (for managing "Send mail as" settings)');
-console.log('  ✓ gmail.metadata (for reading headers/Message-ID for email threading)\n');
+console.log('  ✓ gmail.readonly (for reading reply text and thread content)\n');
+console.log('  Do not add gmail.metadata on the same token; it blocks full reply bodies.\n');
 
 console.log('⚠️  IMPORTANT: Before continuing, make sure your Google Cloud Console has:');
 console.log('   1. OAuth 2.0 Client ID (Desktop app type)');
@@ -69,7 +70,7 @@ rl.question('📥 Paste the authorization code here: ', async (code) => {
       refreshToken: tokens.refresh_token,
       displayName: 'Your Name'
     }, null, 2));
-    console.log('\n✅ This token has BOTH required scopes and will work with the system.\n');
+    console.log('\n✅ This token has the required scopes and will work with the system.\n');
     
   } catch (error) {
     console.error('\n❌ Error getting refresh token:', error.message);

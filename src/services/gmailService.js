@@ -350,7 +350,7 @@ export async function getLatestHumanReply({ fromEmail, threadId }) {
         subject: headers['Subject'] || '',
         date: parsedDate,
         snippet: message.snippet || '',
-        body: message.payload ? extractEmailBody(message.payload) : '',
+        body: message.payload ? extractPlainReplyBody(message.payload) : '',
         gmailMessageId: message.id || '',
       };
     }
@@ -487,6 +487,50 @@ export function extractRecipientNameFromBody(body) {
   return '';
 }
 
+
+function decodeMimePartData(data) {
+  if (!data) return '';
+  return Buffer.from(data, 'base64url').toString('utf8');
+}
+
+function collectPlainTextParts(payload, out = []) {
+  if (!payload) return out;
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    out.push(decodeMimePartData(payload.body.data));
+  }
+  for (const part of payload.parts || []) {
+    collectPlainTextParts(part, out);
+  }
+  return out;
+}
+
+function stripQuotedReplyText(text) {
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const kept = [];
+  for (const line of lines) {
+    const trimmed = line.trimEnd();
+    if (/^On .+ wrote:$/i.test(trimmed)) break;
+    if (/^On .+, .+ wrote:$/i.test(trimmed)) break;
+    if (/^> On .+ wrote:$/i.test(trimmed)) break;
+    if (/^> ?On .+ at .+ wrote:$/i.test(trimmed)) break;
+    if (/^> ?On .+, .+ wrote:$/i.test(trimmed)) break;
+    if (/^> ?On .+ \d{4}, at .+ wrote:$/i.test(trimmed)) break;
+    if (/^> ?On .+ \d{4}, at .+ .+ wrote:$/i.test(trimmed)) break;
+    if (/^_{5,}$/.test(trimmed)) break;
+    if (/^From:\s.+$/i.test(trimmed) && kept.length > 0) break;
+    if (/^Sent:\s.+$/i.test(trimmed) && kept.length > 0) break;
+    kept.push(line);
+  }
+  return kept.join('\n').trimEnd();
+}
+
+function extractPlainReplyBody(payload) {
+  const plainParts = collectPlainTextParts(payload);
+  if (!plainParts.length) {
+    return extractEmailBody(payload);
+  }
+  return stripQuotedReplyText(plainParts[0]);
+}
 
 function extractEmailBody(payload) {
   let body = '';

@@ -270,7 +270,8 @@ export async function pollForReplies(email, limit = 200) {
               'campaignRef.campaignId': campaign._id,
             },
             {
-              $set: { status: 'cancelled' },
+              $set: { status: 'sent' },
+              $unset: { body: '' },
             }
           );
           

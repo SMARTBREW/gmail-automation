@@ -131,15 +131,10 @@ async function main() {
             continue;
           }
         } catch (replyCheckError) {
-          // If reply check fails (e.g., OAuth error), log but don't block enqueueing
-          // The cron job will catch it later
           const errorMsg = replyCheckError.message || String(replyCheckError);
-          if (errorMsg.includes('oauth2') || errorMsg.includes('token')) {
-            console.warn(`⚠️  ${c.to}: Could not check for reply (OAuth error) - will check later via cron`);
-          } else {
-            console.warn(`⚠️  ${c.to}: Could not check for reply - ${errorMsg.substring(0, 50)}...`);
-          }
-          // Continue to enqueue - if there's actually a reply, the cron job will catch it
+          skipped++;
+          console.warn(`⚠️  ${c.to}: Could not verify reply status - skipping follow-up enqueue (${errorMsg.substring(0, 80)})`);
+          continue;
         }
       }
 

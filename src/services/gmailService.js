@@ -259,41 +259,198 @@ export function getConfiguredAccounts() {
   }
 }
 
-export async function checkThreadForReply({ fromEmail, threadId, recipientEmail }) {
+function normalizeFromHeader(fromHeader) {
+  if (!fromHeader) return '';
+  const m = fromHeader.match(/<([^>]+)>/);
+  const addr = (m ? m[1] : fromHeader).trim();
+  return addr.toLowerCase();
+}
+
+function stripAngleBrackets(messageId) {
+  return String(messageId || '')
+    .trim()
+    .replace(/^</, '')
+    .replace(/>$/, '');
+}
+
+function recipientEmailMatches(fromAddr, recipientEmail) {
+  if (!recipientEmail || !fromAddr) return false;
+  return fromAddr === String(recipientEmail).trim().toLowerCase();
+}
+
+function isAutomatedBulk(headers) {
+  const precedence = (headers['Precedence'] || '').toLowerCase();
+  return precedence && (precedence.includes('bulk') || precedence.includes('junk'));
+}
+
+/** OOO / vacation — from the real recipient, not list mail */
+function isVacationLike(headers) {
+  if (isAutomatedBulk(headers)) return false;
+  const subject = (headers['Subject'] || '').toLowerCase();
+  const auto = (headers['Auto-Submitted'] || '').toLowerCase();
+  const precedence = (headers['Precedence'] || '').toLowerCase();
+  if (auto === 'auto-replied') return true;
+  if (precedence.includes('auto_reply')) return true;
+  if (subject.startsWith('auto:')) return true;
+  if (subject.includes('out of office') || subject.includes('out of the office')) return true;
+  if (subject.includes('automatic reply')) return true;
+  return false;
+}
+
+function isHumanNonAutomated(headers) {
+  const autoSubmitted = (headers['Auto-Submitted'] || '').toLowerCase();
+  const precedence = (headers['Precedence'] || '').toLowerCase();
+  if (autoSubmitted && autoSubmitted !== 'no') return false;
+  if (precedence && (precedence.includes('bulk') || precedence.includes('junk') || precedence.includes('auto_reply'))) return false;
+  return true;
+}
+
+function referencesOurMessage(headers, internetMessageId) {
+  if (!internetMessageId) return false;
+  const target = stripAngleBrackets(internetMessageId).toLowerCase();
+  if (!target) return false;
+  const inReplyTo = (headers['In-Reply-To'] || '').toLowerCase();
+  const refs = (headers['References'] || '').toLowerCase();
+  return inReplyTo.includes(target) || refs.includes(target);
+}
+
+function outboundSubjectCorrelates(candidateSubject, outboundSubject) {
+  const norm = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/^\s*(re|fwd|fw)(\s*\[[^\]]+\])?\s*:\s*/gi, '')
+      .trim();
+  const out = norm(outboundSubject);
+  const cand = norm(candidateSubject);
+  if (!out.length) return false;
+  const prefixLen = Math.min(48, out.length);
+  if (out.length >= 12 && cand.includes(out.slice(0, prefixLen))) return true;
+  const words = out.split(/[^a-z0-9]+/i).filter((w) => w.length >= 6);
+  return words.some((w) => cand.includes(w));
+}
+
+function correlatesToOutbound(headers, outboundSubject, internetMessageId) {
+  if (referencesOurMessage(headers, internetMessageId)) return true;
+  if (!outboundSubject) return false;
+  return outboundSubjectCorrelates(headers['Subject'] || '', outboundSubject);
+}
+
+/**
+ * Some clients send OOO in a separate Gmail thread. Search the inbox for a
+ * vacation message from the recipient to us that correlates to this campaign.
+ */
+async function findLooseRecipientVacationReply({
+  gmail,
+  fromEmail,
+  recipientEmail,
+  outboundSubject,
+  internetMessageId,
+  lastSent,
+}) {
+  if (!recipientEmail) return null;
+  if (!outboundSubject && !internetMessageId) return null;
+  const q = `from:${recipientEmail} to:${fromEmail}`;
+  let list;
+  try {
+    list = await gmail.users.messages.list({ userId: 'me', q, maxResults: 25 });
+  } catch {
+    return null;
+  }
+  const items = list.data.messages || [];
+  const lastSentMs = lastSent ? new Date(lastSent).getTime() : 0;
+  const candidates = [];
+  for (const m of items) {
+    const meta = await gmail.users.messages.get({
+      userId: 'me',
+      id: m.id,
+      format: 'metadata',
+      metadataHeaders: [
+        'From',
+        'Subject',
+        'Date',
+        'Auto-Submitted',
+        'Precedence',
+        'In-Reply-To',
+        'References',
+      ],
+    });
+    const headers = Object.fromEntries((meta.data.payload?.headers || []).map((h) => [h.name, h.value]));
+    const fromAddr = normalizeFromHeader(headers['From'] || '');
+    if (!recipientEmailMatches(fromAddr, recipientEmail)) continue;
+    if (!isVacationLike(headers)) continue;
+    if (!correlatesToOutbound(headers, outboundSubject, internetMessageId)) continue;
+    const internalMs = Number(meta.data.internalDate || 0);
+    if (lastSentMs && internalMs > 0 && internalMs < lastSentMs - 2 * 86400000) continue;
+    candidates.push({ id: m.id, internalMs, headers });
+  }
+  candidates.sort((a, b) => b.internalMs - a.internalMs);
+  if (!candidates.length) return null;
+  const pick = candidates[0];
+  const full = await gmail.users.messages.get({ userId: 'me', id: pick.id, format: 'full' });
+  const message = full.data;
+  const headers = Object.fromEntries((message.payload?.headers || []).map((h) => [h.name, h.value]));
+  const dateMs = Date.parse(headers['Date'] || '');
+  const parsedDate = Number.isFinite(dateMs)
+    ? new Date(dateMs)
+    : new Date(Number(pick.internalMs) || Date.now());
+  return {
+    fromHeader: headers['From'] || '',
+    fromEmail: normalizeFromHeader(headers['From'] || ''),
+    subject: headers['Subject'] || '',
+    date: parsedDate,
+    snippet: message.snippet || '',
+    body: message.payload ? extractPlainReplyBody(message.payload) : '',
+    gmailMessageId: message.id || '',
+  };
+}
+
+export async function checkThreadForReply({
+  fromEmail,
+  threadId,
+  recipientEmail,
+  outboundSubject = null,
+  internetMessageId = null,
+  lastSent = null,
+}) {
   try {
     const account = getAccountByEmail(fromEmail);
     // Use cached Gmail client (permanent optimization)
     const gmail = getGmailClient(account.email, account.refreshToken);
 
-    const thread = await gmail.users.threads.get({ userId: 'me', id: threadId, format: 'metadata', metadataHeaders: ['From','Auto-Submitted','Precedence'] });
+    const thread = await gmail.users.threads.get({
+      userId: 'me',
+      id: threadId,
+      format: 'metadata',
+      metadataHeaders: ['From', 'Auto-Submitted', 'Precedence', 'Subject'],
+    });
     const messages = thread.data.messages || [];
-
-    const normalizeEmail = (fromHeader) => {
-      if (!fromHeader) return '';
-      const m = fromHeader.match(/<([^>]+)>/);
-      const addr = (m ? m[1] : fromHeader).trim();
-      return addr.toLowerCase();
-    };
 
     const ourFrom = (fromEmail || '').toLowerCase();
 
     for (const message of messages) {
       const headersArr = message.payload?.headers || [];
       const headers = Object.fromEntries(headersArr.map(h => [h.name, h.value]));
-      const fromHeader = headers['From'] || '';
-      const autoSubmitted = (headers['Auto-Submitted'] || '').toLowerCase();
-      const precedence = (headers['Precedence'] || '').toLowerCase();
-      const fromAddr = normalizeEmail(fromHeader);
+      const fromAddr = normalizeFromHeader(headers['From'] || '');
       // Skip messages sent by our own sender account
       if (fromAddr.includes(ourFrom)) continue;
-      // Skip automated responses (out-of-office, bounce, bulk, etc.)
-      if (autoSubmitted && autoSubmitted !== 'no') continue;
-      if (precedence && (precedence.includes('bulk') || precedence.includes('junk') || precedence.includes('auto_reply'))) continue;
-      // Any human reply in the thread counts — regardless of which address replied.
-      // This fixes the case where recipient replies from a different address
-      // (e.g. sent to team@domain.com but reply comes from ceo@domain.com).
-      if (fromAddr) return true;
+      // Normal human reply (not auto-responder headers)
+      if (isHumanNonAutomated(headers) && fromAddr) return true;
+      // Recipient vacation / OOO in the same thread (often Auto-Submitted: auto-replied or Subject: Auto: ...)
+      if (recipientEmail && recipientEmailMatches(fromAddr, recipientEmail) && isVacationLike(headers)) {
+        return true;
+      }
     }
+
+    const loose = await findLooseRecipientVacationReply({
+      gmail,
+      fromEmail,
+      recipientEmail,
+      outboundSubject,
+      internetMessageId,
+      lastSent,
+    });
+    if (loose) return true;
+
     return false;
   } catch (error) {
     const errorMsg = error.message || String(error);
@@ -311,19 +468,19 @@ export async function checkThreadForReply({ fromEmail, threadId, recipientEmail 
   }
 }
 
-export async function getLatestHumanReply({ fromEmail, threadId }) {
+export async function getLatestHumanReply({
+  fromEmail,
+  threadId,
+  recipientEmail = null,
+  outboundSubject = null,
+  internetMessageId = null,
+  lastSent = null,
+}) {
   try {
     const account = getAccountByEmail(fromEmail);
     const gmail = getGmailClient(account.email, account.refreshToken);
     const thread = await gmail.users.threads.get({ userId: 'me', id: threadId, format: 'full' });
     const messages = thread.data.messages || [];
-
-    const normalizeEmail = (fromHeader) => {
-      if (!fromHeader) return '';
-      const m = fromHeader.match(/<([^>]+)>/);
-      const addr = (m ? m[1] : fromHeader).trim();
-      return addr.toLowerCase();
-    };
 
     const ourFrom = (fromEmail || '').toLowerCase();
 
@@ -331,21 +488,17 @@ export async function getLatestHumanReply({ fromEmail, threadId }) {
       const message = messages[idx];
       const headersArr = message.payload?.headers || [];
       const headers = Object.fromEntries(headersArr.map(h => [h.name, h.value]));
-      const fromHeader = headers['From'] || '';
-      const autoSubmitted = (headers['Auto-Submitted'] || '').toLowerCase();
-      const precedence = (headers['Precedence'] || '').toLowerCase();
-      const fromAddr = normalizeEmail(fromHeader);
+      const fromAddr = normalizeFromHeader(headers['From'] || '');
 
       if (fromAddr.includes(ourFrom)) continue;
-      if (autoSubmitted && autoSubmitted !== 'no') continue;
-      if (precedence && (precedence.includes('bulk') || precedence.includes('junk') || precedence.includes('auto_reply'))) continue;
+      if (!isHumanNonAutomated(headers)) continue;
       if (!fromAddr) continue;
 
       const dateMs = Date.parse(headers['Date'] || '');
       const parsedDate = Number.isFinite(dateMs) ? new Date(dateMs) : new Date();
 
       return {
-        fromHeader,
+        fromHeader: headers['From'] || '',
         fromEmail: fromAddr,
         subject: headers['Subject'] || '',
         date: parsedDate,
@@ -355,7 +508,39 @@ export async function getLatestHumanReply({ fromEmail, threadId }) {
       };
     }
 
-    return null;
+    if (recipientEmail) {
+      for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
+        const message = messages[idx];
+        const headersArr = message.payload?.headers || [];
+        const headers = Object.fromEntries(headersArr.map(h => [h.name, h.value]));
+        const fromAddr = normalizeFromHeader(headers['From'] || '');
+        if (fromAddr.includes(ourFrom)) continue;
+        if (!recipientEmailMatches(fromAddr, recipientEmail)) continue;
+        if (!isVacationLike(headers)) continue;
+
+        const dateMs = Date.parse(headers['Date'] || '');
+        const parsedDate = Number.isFinite(dateMs) ? new Date(dateMs) : new Date();
+
+        return {
+          fromHeader: headers['From'] || '',
+          fromEmail: fromAddr,
+          subject: headers['Subject'] || '',
+          date: parsedDate,
+          snippet: message.snippet || '',
+          body: message.payload ? extractPlainReplyBody(message.payload) : '',
+          gmailMessageId: message.id || '',
+        };
+      }
+    }
+
+    return await findLooseRecipientVacationReply({
+      gmail,
+      fromEmail,
+      recipientEmail,
+      outboundSubject,
+      internetMessageId,
+      lastSent,
+    });
   } catch (error) {
     const errorMsg = error.message || String(error);
     if (errorMsg.includes('oauth2') || errorMsg.includes('token') || errorMsg.includes('400') || errorMsg.includes('Bad Request') || error?.response?.status === 400) {

@@ -117,12 +117,19 @@ export async function processGmailNotification(email, historyId) {
               fromEmail: email,
               threadId: threadId,
               recipientEmail: campaign.to,
+              outboundSubject: campaign.subject || null,
+              internetMessageId: campaign.internetMessageId || null,
+              lastSent: campaign.lastSent || null,
             });
             
             if (hasReply) {
               const reply = await getLatestHumanReply({
                 fromEmail: email,
                 threadId,
+                recipientEmail: campaign.to,
+                outboundSubject: campaign.subject || null,
+                internetMessageId: campaign.internetMessageId || null,
+                lastSent: campaign.lastSent || null,
               });
 
               // Mark campaign as replied and save reply details
@@ -250,12 +257,19 @@ export async function pollForReplies(email, limit = 200) {
           fromEmail: email,
           threadId: campaign.threadId,
           recipientEmail: campaign.to,
+          outboundSubject: campaign.subject || null,
+          internetMessageId: campaign.internetMessageId || null,
+          lastSent: campaign.lastSent || null,
         });
         
         if (hasReply) {
           const reply = await getLatestHumanReply({
             fromEmail: email,
             threadId: campaign.threadId,
+            recipientEmail: campaign.to,
+            outboundSubject: campaign.subject || null,
+            internetMessageId: campaign.internetMessageId || null,
+            lastSent: campaign.lastSent || null,
           });
 
           // Mark campaign as replied and save reply details

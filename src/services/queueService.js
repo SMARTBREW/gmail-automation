@@ -405,11 +405,18 @@ export async function processOutboxOnce() {
             fromEmail: job.from,
             threadId: job.headers?.threadId || campaign.threadId,
             recipientEmail: job.to,
+            outboundSubject: campaign.subject || null,
+            internetMessageId: campaign.internetMessageId || null,
+            lastSent: campaign.lastSent || null,
           });
           if (hasReply) {
             const reply = await getLatestHumanReply({
               fromEmail: job.from,
               threadId: job.headers?.threadId || campaign.threadId,
+              recipientEmail: job.to,
+              outboundSubject: campaign.subject || null,
+              internetMessageId: campaign.internetMessageId || null,
+              lastSent: campaign.lastSent || null,
             });
             // Mark campaign as replied and skip sending (polling service may have failed)
             await markRepliedWithDetails({ campaignId: job.campaignRef.campaignId, reply });

@@ -66,6 +66,10 @@ async function main() {
       const reply = await getLatestHumanReply({
         fromEmail,
         threadId: campaign.threadId,
+        recipientEmail: campaign.to,
+        outboundSubject: campaign.subject || null,
+        internetMessageId: campaign.internetMessageId || null,
+        lastSent: campaign.lastSent || null,
       });
       if (!reply) continue;
       await markRepliedWithDetails({ campaignId: campaign._id, reply });
@@ -82,12 +86,19 @@ async function main() {
         fromEmail,
         threadId: campaign.threadId,
         recipientEmail: campaign.to,
+        outboundSubject: campaign.subject || null,
+        internetMessageId: campaign.internetMessageId || null,
+        lastSent: campaign.lastSent || null,
       });
       if (!hasReply) continue;
 
       const reply = await getLatestHumanReply({
         fromEmail,
         threadId: campaign.threadId,
+        recipientEmail: campaign.to,
+        outboundSubject: campaign.subject || null,
+        internetMessageId: campaign.internetMessageId || null,
+        lastSent: campaign.lastSent || null,
       });
       await markRepliedWithDetails({ campaignId: campaign._id, reply });
       const cancelled = await cancelPendingFollowups(campaign._id);

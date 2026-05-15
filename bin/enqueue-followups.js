@@ -101,6 +101,9 @@ async function main() {
           fromEmail: c.from,
           threadId: c.threadId,
           recipientEmail: c.to,
+          outboundSubject: c.subject || null,
+          internetMessageId: c.internetMessageId || null,
+          lastSent: c.lastSent || null,
         });
           
         if (hasReply) {
@@ -110,6 +113,10 @@ async function main() {
             const reply = await getLatestHumanReply({
               fromEmail: c.from,
               threadId: c.threadId,
+              recipientEmail: c.to,
+              outboundSubject: c.subject || null,
+              internetMessageId: c.internetMessageId || null,
+              lastSent: c.lastSent || null,
             });
             await markRepliedWithDetails({ campaignId: c._id, reply });
             

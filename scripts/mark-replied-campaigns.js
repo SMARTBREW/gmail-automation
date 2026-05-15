@@ -32,6 +32,9 @@ async function main() {
         fromEmail: campaign.from,
         threadId: campaign.threadId,
         recipientEmail: campaign.to,
+        outboundSubject: campaign.subject || null,
+        internetMessageId: campaign.internetMessageId || null,
+        lastSent: campaign.lastSent || null,
       });
       
       if (hasReply) {
@@ -39,6 +42,10 @@ async function main() {
         const reply = await getLatestHumanReply({
           fromEmail: campaign.from,
           threadId: campaign.threadId,
+          recipientEmail: campaign.to,
+          outboundSubject: campaign.subject || null,
+          internetMessageId: campaign.internetMessageId || null,
+          lastSent: campaign.lastSent || null,
         });
         await markRepliedWithDetails({ campaignId: campaign._id, reply });
         markedAsReplied++;

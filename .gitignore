@@ -5,4 +5,5 @@ campaigns.json
 .campaigns.lock
 *.log
 .DS_Store
+exports/
 

@@ -19,6 +19,9 @@
     "presentation-report": "node scripts/presentation-report.js",
     "presentation": "node scripts/presentation-report.js && node scripts/build-presentation.js",
     "weekly-presentation-report": "node scripts/weekly-presentation-report.js",
+    "export-daily-csv": "node scripts/export-daily-by-account-csv.js",
+    "export-daily-report": "node scripts/export-daily-by-account-csv.js --data-only --html exports/daily-paste.html",
+    "export-daily-csv:today": "node scripts/export-daily-by-account-csv.js --today --data-only --html exports/daily-paste.html",
     "weekly-presentation": "node scripts/weekly-presentation-report.js && node scripts/build-weekly-presentation.js"
   },
   "keywords": [
@@ -37,6 +40,7 @@
     "mongoose": "^8.19.3",
     "node-cron": "^3.0.3",
     "openai": "^4.104.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

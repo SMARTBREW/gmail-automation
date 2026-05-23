@@ -278,6 +278,26 @@ function recipientEmailMatches(fromAddr, recipientEmail) {
   return fromAddr === String(recipientEmail).trim().toLowerCase();
 }
 
+/** Exact match — avoids false skips when one address is a substring of another. */
+function isOurOutboundSender(fromAddr, accountEmail) {
+  if (!fromAddr || !accountEmail) return false;
+  return fromAddr === String(accountEmail).trim().toLowerCase();
+}
+
+function messageToReplyRecord(message, headers, fromAddr) {
+  const dateMs = Date.parse(headers['Date'] || '');
+  const parsedDate = Number.isFinite(dateMs) ? new Date(dateMs) : new Date();
+  return {
+    fromHeader: headers['From'] || '',
+    fromEmail: fromAddr,
+    subject: headers['Subject'] || '',
+    date: parsedDate,
+    snippet: message.snippet || '',
+    body: message.payload ? extractPlainReplyBody(message.payload) : '',
+    gmailMessageId: message.id || '',
+  };
+}
+
 function isAutomatedBulk(headers) {
   const precedence = (headers['Precedence'] || '').toLowerCase();
   return precedence && (precedence.includes('bulk') || precedence.includes('junk'));
@@ -333,6 +353,66 @@ function correlatesToOutbound(headers, outboundSubject, internetMessageId) {
   if (referencesOurMessage(headers, internetMessageId)) return true;
   if (!outboundSubject) return false;
   return outboundSubjectCorrelates(headers['Subject'] || '', outboundSubject);
+}
+
+/**
+ * Prospect replied from a different address (assistant, personal email, etc.) in a
+ * separate thread. Search inbox for any human reply to us that correlates to our send.
+ */
+async function findLooseCorrelatedHumanReply({
+  gmail,
+  fromEmail,
+  outboundSubject,
+  internetMessageId,
+  lastSent,
+}) {
+  if (!outboundSubject && !internetMessageId) return null;
+  const q = `to:${fromEmail} in:inbox`;
+  let list;
+  try {
+    list = await gmail.users.messages.list({ userId: 'me', q, maxResults: 40 });
+  } catch {
+    return null;
+  }
+  const items = list.data.messages || [];
+  const lastSentMs = lastSent ? new Date(lastSent).getTime() : 0;
+  const candidates = [];
+
+  for (const m of items) {
+    const meta = await gmail.users.messages.get({
+      userId: 'me',
+      id: m.id,
+      format: 'metadata',
+      metadataHeaders: [
+        'From',
+        'To',
+        'Subject',
+        'Date',
+        'Auto-Submitted',
+        'Precedence',
+        'In-Reply-To',
+        'References',
+      ],
+    });
+    const headers = Object.fromEntries((meta.data.payload?.headers || []).map((h) => [h.name, h.value]));
+    const fromAddr = normalizeFromHeader(headers['From'] || '');
+    if (isOurOutboundSender(fromAddr, fromEmail)) continue;
+    if (!isHumanNonAutomated(headers)) continue;
+    if (isVacationLike(headers)) continue;
+    if (!correlatesToOutbound(headers, outboundSubject, internetMessageId)) continue;
+    const internalMs = Number(meta.data.internalDate || 0);
+    if (lastSentMs && internalMs > 0 && internalMs < lastSentMs - 60_000) continue;
+    candidates.push({ id: m.id, internalMs, headers, fromAddr });
+  }
+
+  candidates.sort((a, b) => b.internalMs - a.internalMs);
+  if (!candidates.length) return null;
+
+  const pick = candidates[0];
+  const full = await gmail.users.messages.get({ userId: 'me', id: pick.id, format: 'full' });
+  const message = full.data;
+  const headers = Object.fromEntries((message.payload?.headers || []).map((h) => [h.name, h.value]));
+  return messageToReplyRecord(message, headers, pick.fromAddr);
 }
 
 /**
@@ -425,15 +505,16 @@ export async function checkThreadForReply({
     });
     const messages = thread.data.messages || [];
 
-    const ourFrom = (fromEmail || '').toLowerCase();
+    const lastSentMs = lastSent ? new Date(lastSent).getTime() : 0;
 
     for (const message of messages) {
       const headersArr = message.payload?.headers || [];
       const headers = Object.fromEntries(headersArr.map(h => [h.name, h.value]));
       const fromAddr = normalizeFromHeader(headers['From'] || '');
-      // Skip messages sent by our own sender account
-      if (fromAddr.includes(ourFrom)) continue;
-      // Normal human reply (not auto-responder headers)
+      if (isOurOutboundSender(fromAddr, fromEmail)) continue;
+      const internalMs = Number(message.internalDate || 0);
+      if (lastSentMs && internalMs > 0 && internalMs < lastSentMs - 60_000) continue;
+      // Any human inbound in thread (including replies from a different email than we mailed)
       if (isHumanNonAutomated(headers) && fromAddr) return true;
       // Recipient vacation / OOO in the same thread (often Auto-Submitted: auto-replied or Subject: Auto: ...)
       if (recipientEmail && recipientEmailMatches(fromAddr, recipientEmail) && isVacationLike(headers)) {
@@ -441,7 +522,7 @@ export async function checkThreadForReply({
       }
     }
 
-    const loose = await findLooseRecipientVacationReply({
+    const looseVacation = await findLooseRecipientVacationReply({
       gmail,
       fromEmail,
       recipientEmail,
@@ -449,7 +530,16 @@ export async function checkThreadForReply({
       internetMessageId,
       lastSent,
     });
-    if (loose) return true;
+    if (looseVacation) return true;
+
+    const looseHuman = await findLooseCorrelatedHumanReply({
+      gmail,
+      fromEmail,
+      outboundSubject,
+      internetMessageId,
+      lastSent,
+    });
+    if (looseHuman) return true;
 
     return false;
   } catch (error) {
@@ -482,7 +572,7 @@ export async function getLatestHumanReply({
     const thread = await gmail.users.threads.get({ userId: 'me', id: threadId, format: 'full' });
     const messages = thread.data.messages || [];
 
-    const ourFrom = (fromEmail || '').toLowerCase();
+    const lastSentMs = lastSent ? new Date(lastSent).getTime() : 0;
 
     for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
       const message = messages[idx];
@@ -490,22 +580,13 @@ export async function getLatestHumanReply({
       const headers = Object.fromEntries(headersArr.map(h => [h.name, h.value]));
       const fromAddr = normalizeFromHeader(headers['From'] || '');
 
-      if (fromAddr.includes(ourFrom)) continue;
+      if (isOurOutboundSender(fromAddr, fromEmail)) continue;
+      const internalMs = Number(message.internalDate || 0);
+      if (lastSentMs && internalMs > 0 && internalMs < lastSentMs - 60_000) continue;
       if (!isHumanNonAutomated(headers)) continue;
       if (!fromAddr) continue;
 
-      const dateMs = Date.parse(headers['Date'] || '');
-      const parsedDate = Number.isFinite(dateMs) ? new Date(dateMs) : new Date();
-
-      return {
-        fromHeader: headers['From'] || '',
-        fromEmail: fromAddr,
-        subject: headers['Subject'] || '',
-        date: parsedDate,
-        snippet: message.snippet || '',
-        body: message.payload ? extractPlainReplyBody(message.payload) : '',
-        gmailMessageId: message.id || '',
-      };
+      return messageToReplyRecord(message, headers, fromAddr);
     }
 
     if (recipientEmail) {
@@ -514,29 +595,29 @@ export async function getLatestHumanReply({
         const headersArr = message.payload?.headers || [];
         const headers = Object.fromEntries(headersArr.map(h => [h.name, h.value]));
         const fromAddr = normalizeFromHeader(headers['From'] || '');
-        if (fromAddr.includes(ourFrom)) continue;
+        if (isOurOutboundSender(fromAddr, fromEmail)) continue;
         if (!recipientEmailMatches(fromAddr, recipientEmail)) continue;
         if (!isVacationLike(headers)) continue;
+        const internalMs = Number(message.internalDate || 0);
+        if (lastSentMs && internalMs > 0 && internalMs < lastSentMs - 60_000) continue;
 
-        const dateMs = Date.parse(headers['Date'] || '');
-        const parsedDate = Number.isFinite(dateMs) ? new Date(dateMs) : new Date();
-
-        return {
-          fromHeader: headers['From'] || '',
-          fromEmail: fromAddr,
-          subject: headers['Subject'] || '',
-          date: parsedDate,
-          snippet: message.snippet || '',
-          body: message.payload ? extractPlainReplyBody(message.payload) : '',
-          gmailMessageId: message.id || '',
-        };
+        return messageToReplyRecord(message, headers, fromAddr);
       }
     }
 
-    return await findLooseRecipientVacationReply({
+    const looseVacation = await findLooseRecipientVacationReply({
       gmail,
       fromEmail,
       recipientEmail,
+      outboundSubject,
+      internetMessageId,
+      lastSent,
+    });
+    if (looseVacation) return looseVacation;
+
+    return await findLooseCorrelatedHumanReply({
+      gmail,
+      fromEmail,
       outboundSubject,
       internetMessageId,
       lastSent,

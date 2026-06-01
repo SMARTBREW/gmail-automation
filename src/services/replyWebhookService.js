@@ -119,6 +119,7 @@ export async function processGmailNotification(email, historyId) {
               recipientEmail: campaign.to,
               outboundSubject: campaign.subject || null,
               internetMessageId: campaign.internetMessageId || null,
+              allInternetMessageIds: campaign.allInternetMessageIds || null,
               lastSent: campaign.lastSent || null,
             });
             
@@ -129,6 +130,7 @@ export async function processGmailNotification(email, historyId) {
                 recipientEmail: campaign.to,
                 outboundSubject: campaign.subject || null,
                 internetMessageId: campaign.internetMessageId || null,
+                allInternetMessageIds: campaign.allInternetMessageIds || null,
                 lastSent: campaign.lastSent || null,
               });
 
@@ -259,6 +261,7 @@ export async function pollForReplies(email, limit = 200) {
           recipientEmail: campaign.to,
           outboundSubject: campaign.subject || null,
           internetMessageId: campaign.internetMessageId || null,
+          allInternetMessageIds: campaign.allInternetMessageIds || null,
           lastSent: campaign.lastSent || null,
         });
         
@@ -269,6 +272,7 @@ export async function pollForReplies(email, limit = 200) {
             recipientEmail: campaign.to,
             outboundSubject: campaign.subject || null,
             internetMessageId: campaign.internetMessageId || null,
+            allInternetMessageIds: campaign.allInternetMessageIds || null,
             lastSent: campaign.lastSent || null,
           });
 

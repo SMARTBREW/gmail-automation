@@ -334,39 +334,85 @@ function referencesOurMessage(headers, internetMessageId) {
   return inReplyTo.includes(target) || refs.includes(target);
 }
 
-function outboundSubjectCorrelates(candidateSubject, outboundSubject) {
-  const norm = (s) =>
-    String(s || '')
-      .toLowerCase()
-      .replace(/^\s*(re|fwd|fw)(\s*\[[^\]]+\])?\s*:\s*/gi, '')
-      .trim();
-  const out = norm(outboundSubject);
-  const cand = norm(candidateSubject);
-  if (!out.length) return false;
-  const prefixLen = Math.min(48, out.length);
-  if (out.length >= 12 && cand.includes(out.slice(0, prefixLen))) return true;
-  const words = out.split(/[^a-z0-9]+/i).filter((w) => w.length >= 6);
-  return words.some((w) => cand.includes(w));
+function normalizeSubjectForCompare(subject) {
+  return String(subject || '')
+    .toLowerCase()
+    .replace(/^\s*(re|fwd|fw)(\s*\[[^\]]+\])?\s*:\s*/gi, '')
+    .trim();
+}
+
+/** Strict subject match only — avoids matching one shared campaign subject across many contacts. */
+function subjectsMatchExactly(candidateSubject, outboundSubject) {
+  const out = normalizeSubjectForCompare(outboundSubject);
+  const cand = normalizeSubjectForCompare(candidateSubject);
+  if (!out.length || !cand.length) return false;
+  return out === cand;
+}
+
+function collectOutboundMessageIds(internetMessageId, allInternetMessageIds) {
+  const ids = [];
+  if (internetMessageId) ids.push(internetMessageId);
+  if (Array.isArray(allInternetMessageIds)) {
+    for (const id of allInternetMessageIds) {
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+  }
+  return ids;
+}
+
+function referencesAnyOutboundMessage(headers, messageIds) {
+  for (const id of messageIds) {
+    if (referencesOurMessage(headers, id)) return true;
+  }
+  return false;
 }
 
 function correlatesToOutbound(headers, outboundSubject, internetMessageId) {
   if (referencesOurMessage(headers, internetMessageId)) return true;
   if (!outboundSubject) return false;
-  return outboundSubjectCorrelates(headers['Subject'] || '', outboundSubject);
+  return subjectsMatchExactly(headers['Subject'] || '', outboundSubject);
+}
+
+const REPLY_METADATA_HEADERS = [
+  'From',
+  'To',
+  'Subject',
+  'Date',
+  'Auto-Submitted',
+  'Precedence',
+  'In-Reply-To',
+  'References',
+];
+
+async function fetchMessageMetadata(gmail, messageId) {
+  const meta = await gmail.users.messages.get({
+    userId: 'me',
+    id: messageId,
+    format: 'metadata',
+    metadataHeaders: REPLY_METADATA_HEADERS,
+  });
+  const headers = Object.fromEntries((meta.data.payload?.headers || []).map((h) => [h.name, h.value]));
+  return {
+    headers,
+    fromAddr: normalizeFromHeader(headers['From'] || ''),
+    internalMs: Number(meta.data.internalDate || 0),
+  };
 }
 
 /**
- * Prospect replied from a different address (assistant, personal email, etc.) in a
- * separate thread. Search inbox for any human reply to us that correlates to our send.
+ * Reply in a separate thread that explicitly references our outbound Message-ID.
+ * Safe across contacts (each send has a unique Message-ID).
  */
-async function findLooseCorrelatedHumanReply({
+async function findInboxReplyByMessageReference({
   gmail,
   fromEmail,
-  outboundSubject,
   internetMessageId,
+  allInternetMessageIds = null,
   lastSent,
 }) {
-  if (!outboundSubject && !internetMessageId) return null;
+  const messageIds = collectOutboundMessageIds(internetMessageId, allInternetMessageIds);
+  if (!messageIds.length) return null;
+
   const q = `to:${fromEmail} in:inbox`;
   let list;
   try {
@@ -374,33 +420,60 @@ async function findLooseCorrelatedHumanReply({
   } catch {
     return null;
   }
-  const items = list.data.messages || [];
+
   const lastSentMs = lastSent ? new Date(lastSent).getTime() : 0;
   const candidates = [];
 
-  for (const m of items) {
-    const meta = await gmail.users.messages.get({
-      userId: 'me',
-      id: m.id,
-      format: 'metadata',
-      metadataHeaders: [
-        'From',
-        'To',
-        'Subject',
-        'Date',
-        'Auto-Submitted',
-        'Precedence',
-        'In-Reply-To',
-        'References',
-      ],
-    });
-    const headers = Object.fromEntries((meta.data.payload?.headers || []).map((h) => [h.name, h.value]));
-    const fromAddr = normalizeFromHeader(headers['From'] || '');
+  for (const m of list.data.messages || []) {
+    const { headers, fromAddr, internalMs } = await fetchMessageMetadata(gmail, m.id);
     if (isOurOutboundSender(fromAddr, fromEmail)) continue;
     if (!isHumanNonAutomated(headers)) continue;
     if (isVacationLike(headers)) continue;
-    if (!correlatesToOutbound(headers, outboundSubject, internetMessageId)) continue;
-    const internalMs = Number(meta.data.internalDate || 0);
+    if (!referencesAnyOutboundMessage(headers, messageIds)) continue;
+    if (lastSentMs && internalMs > 0 && internalMs < lastSentMs - 60_000) continue;
+    candidates.push({ id: m.id, internalMs, headers, fromAddr });
+  }
+
+  candidates.sort((a, b) => b.internalMs - a.internalMs);
+  if (!candidates.length) return null;
+
+  const pick = candidates[0];
+  const full = await gmail.users.messages.get({ userId: 'me', id: pick.id, format: 'full' });
+  const message = full.data;
+  const headers = Object.fromEntries((message.payload?.headers || []).map((h) => [h.name, h.value]));
+  return messageToReplyRecord(message, headers, pick.fromAddr);
+}
+
+/**
+ * Fallback when Message-ID is missing: only inbox mail from this recipient to us
+ * with the exact same subject line (not shared keywords).
+ */
+async function findRecipientInboxHumanReply({
+  gmail,
+  fromEmail,
+  recipientEmail,
+  outboundSubject,
+  lastSent,
+}) {
+  if (!recipientEmail || !outboundSubject) return null;
+
+  const q = `from:${recipientEmail} to:${fromEmail}`;
+  let list;
+  try {
+    list = await gmail.users.messages.list({ userId: 'me', q, maxResults: 25 });
+  } catch {
+    return null;
+  }
+
+  const lastSentMs = lastSent ? new Date(lastSent).getTime() : 0;
+  const candidates = [];
+
+  for (const m of list.data.messages || []) {
+    const { headers, fromAddr, internalMs } = await fetchMessageMetadata(gmail, m.id);
+    if (!recipientEmailMatches(fromAddr, recipientEmail)) continue;
+    if (!isHumanNonAutomated(headers)) continue;
+    if (isVacationLike(headers)) continue;
+    if (!subjectsMatchExactly(headers['Subject'] || '', outboundSubject)) continue;
     if (lastSentMs && internalMs > 0 && internalMs < lastSentMs - 60_000) continue;
     candidates.push({ id: m.id, internalMs, headers, fromAddr });
   }
@@ -490,6 +563,7 @@ export async function checkThreadForReply({
   recipientEmail,
   outboundSubject = null,
   internetMessageId = null,
+  allInternetMessageIds = null,
   lastSent = null,
 }) {
   try {
@@ -532,14 +606,23 @@ export async function checkThreadForReply({
     });
     if (looseVacation) return true;
 
-    const looseHuman = await findLooseCorrelatedHumanReply({
+    const byMessageRef = await findInboxReplyByMessageReference({
       gmail,
       fromEmail,
-      outboundSubject,
       internetMessageId,
+      allInternetMessageIds,
       lastSent,
     });
-    if (looseHuman) return true;
+    if (byMessageRef) return true;
+
+    const byRecipient = await findRecipientInboxHumanReply({
+      gmail,
+      fromEmail,
+      recipientEmail,
+      outboundSubject,
+      lastSent,
+    });
+    if (byRecipient) return true;
 
     return false;
   } catch (error) {
@@ -564,6 +647,7 @@ export async function getLatestHumanReply({
   recipientEmail = null,
   outboundSubject = null,
   internetMessageId = null,
+  allInternetMessageIds = null,
   lastSent = null,
 }) {
   try {
@@ -615,11 +699,20 @@ export async function getLatestHumanReply({
     });
     if (looseVacation) return looseVacation;
 
-    return await findLooseCorrelatedHumanReply({
+    const byMessageRef = await findInboxReplyByMessageReference({
       gmail,
       fromEmail,
-      outboundSubject,
       internetMessageId,
+      allInternetMessageIds,
+      lastSent,
+    });
+    if (byMessageRef) return byMessageRef;
+
+    return await findRecipientInboxHumanReply({
+      gmail,
+      fromEmail,
+      recipientEmail,
+      outboundSubject,
       lastSent,
     });
   } catch (error) {

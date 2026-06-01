@@ -103,6 +103,7 @@ async function main() {
           recipientEmail: c.to,
           outboundSubject: c.subject || null,
           internetMessageId: c.internetMessageId || null,
+          allInternetMessageIds: c.allInternetMessageIds || null,
           lastSent: c.lastSent || null,
         });
           
@@ -116,6 +117,7 @@ async function main() {
               recipientEmail: c.to,
               outboundSubject: c.subject || null,
               internetMessageId: c.internetMessageId || null,
+              allInternetMessageIds: c.allInternetMessageIds || null,
               lastSent: c.lastSent || null,
             });
             await markRepliedWithDetails({ campaignId: c._id, reply });

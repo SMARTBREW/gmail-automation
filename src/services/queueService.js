@@ -407,6 +407,7 @@ export async function processOutboxOnce() {
             recipientEmail: job.to,
             outboundSubject: campaign.subject || null,
             internetMessageId: campaign.internetMessageId || null,
+            allInternetMessageIds: campaign.allInternetMessageIds || null,
             lastSent: campaign.lastSent || null,
           });
           if (hasReply) {
@@ -416,6 +417,7 @@ export async function processOutboxOnce() {
               recipientEmail: job.to,
               outboundSubject: campaign.subject || null,
               internetMessageId: campaign.internetMessageId || null,
+              allInternetMessageIds: campaign.allInternetMessageIds || null,
               lastSent: campaign.lastSent || null,
             });
             // Mark campaign as replied and skip sending (polling service may have failed)

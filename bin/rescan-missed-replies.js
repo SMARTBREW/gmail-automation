@@ -51,6 +51,7 @@ async function rescanAccount(email) {
         recipientEmail: campaign.to,
         outboundSubject: campaign.subject || null,
         internetMessageId: campaign.internetMessageId || null,
+        allInternetMessageIds: campaign.allInternetMessageIds || null,
         lastSent: campaign.lastSent || null,
       });
       if (!hasReply) continue;
@@ -61,6 +62,7 @@ async function rescanAccount(email) {
         recipientEmail: campaign.to,
         outboundSubject: campaign.subject || null,
         internetMessageId: campaign.internetMessageId || null,
+        allInternetMessageIds: campaign.allInternetMessageIds || null,
         lastSent: campaign.lastSent || null,
       });
 

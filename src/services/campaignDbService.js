@@ -84,6 +84,26 @@ export async function markReplied({ campaignId }) {
 }
 
 export async function markRepliedWithDetails({ campaignId, reply }) {
+  const campaign = await Campaign.findById(campaignId).lean();
+  if (!campaign) return;
+
+  const gmailMessageId = reply?.gmailMessageId || '';
+  if (gmailMessageId) {
+    const alreadyOn = await Campaign.findOne({
+      from: campaign.from,
+      replyMessageId: gmailMessageId,
+      _id: { $ne: campaignId },
+    })
+      .select('to')
+      .lean();
+    if (alreadyOn) {
+      console.warn(
+        `Skipping duplicate reply save: Gmail message ${gmailMessageId} already stored on ${alreadyOn.to} (not ${campaign.to})`,
+      );
+      return;
+    }
+  }
+
   const update = {
     replied: true,
     repliedAt: reply?.date || new Date(),
@@ -95,7 +115,7 @@ export async function markRepliedWithDetails({ campaignId, reply }) {
     update.replySubject = reply.subject || '';
     update.replySnippet = reply.snippet || '';
     update.replyBody = reply.body || '';
-    update.replyMessageId = reply.gmailMessageId || '';
+    update.replyMessageId = gmailMessageId;
   }
 
   await Campaign.findByIdAndUpdate(campaignId, { $set: update });

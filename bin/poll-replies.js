@@ -1,15 +1,24 @@
 #!/usr/bin/env node
 /**
  * Poll for Replies
- * 
- * This script periodically checks for replies to campaign emails and marks
- * campaigns as replied. This is a simpler alternative to Gmail Push Notifications
- * that doesn't require Pub/Sub setup.
- * 
+ *
+ * Two passes per account (see replyPollConfig.js):
+ * 1. Inbox-first — recent inbox threads → unreplied campaigns on that thread
+ * 2. Campaign queue — rotated (follow-ups, stalest checks, newest sends)
+ *
  * Usage:
- *   node bin/poll-replies.js                    # Check all accounts
- *   node bin/poll-replies.js <email>            # Check specific account
- *   node bin/poll-replies.js --interval 300     # Check every 5 minutes (default: 60s)
+ *   node bin/poll-replies.js --once
+ *   node bin/poll-replies.js <email> --once
+ *   node bin/poll-replies.js --interval=900    # every 15 min (recommended for cron)
+ *
+ * Env:
+ *   REPLY_POLL_LIMIT=500
+ *   REPLY_POLL_DAYS=90
+ *   REPLY_POLL_MIN_HOURS_BETWEEN_CHECKS=2
+ *   REPLY_INBOX_SCAN_DAYS=2
+ *
+ * Cron example (every 15 minutes):
+ *   */15 * * * * cd /path/to/gmail-automation && node bin/poll-replies.js --once >> logs/poll-replies.log 2>&1
  */
 
 import dotenv from 'dotenv';
@@ -18,63 +27,73 @@ dotenv.config();
 import { connectMongo } from '../src/db/mongo.js';
 import { getConfiguredAccounts } from '../src/services/gmailService.js';
 import { pollForReplies } from '../src/services/replyWebhookService.js';
+import { getReplyPollConfig } from '../src/services/replyPollConfig.js';
 
-// Parse arguments - skip flags like --once and --interval=
-const args = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
+const args = process.argv.slice(2).filter((arg) => !arg.startsWith('--'));
 const email = args[0] || null;
-const intervalArg = process.argv.find(arg => arg.startsWith('--interval='));
-const intervalSeconds = intervalArg ? parseInt(intervalArg.split('=')[1]) : 60;
+const intervalArg = process.argv.find((arg) => arg.startsWith('--interval='));
+const intervalSeconds = intervalArg ? parseInt(intervalArg.split('=')[1], 10) : 900;
 
 async function checkReplies() {
   await connectMongo();
-  
+
+  const cfg = getReplyPollConfig();
   const accounts = email ? [email] : getConfiguredAccounts();
-  
-  console.log(`🔍 Checking for replies (${accounts.length} account(s))...\n`);
-  
+
+  console.log(`🔍 Reply poll (${accounts.length} account(s))`);
+  console.log(
+    `   Config: limit=${cfg.limit}, pollDays=${cfg.pollDays}, inboxDays=${cfg.inboxScanDays}, minHoursBetweenChecks=${cfg.minHoursBetweenChecks}\n`,
+  );
+
   let totalMarked = 0;
   let totalCancelled = 0;
-  
+  let totalInboxThreads = 0;
+
   for (const accountEmail of accounts) {
     try {
       console.log(`Checking ${accountEmail}...`);
-      const result = await pollForReplies(accountEmail, 200);
-      
+      const result = await pollForReplies(accountEmail);
+
+      totalInboxThreads += result.inboxThreadsScanned || 0;
+      totalMarked += result.markedAsReplied;
+      totalCancelled += result.cancelledFollowups;
+
+      console.log(`   Inbox threads scanned: ${result.inboxThreadsScanned || 0}`);
+      console.log(`   Campaign queue checked: ${result.checked}`);
       if (result.markedAsReplied > 0) {
-        console.log(`   ✅ Marked ${result.markedAsReplied} campaigns as replied`);
+        console.log(
+          `   ✅ Marked ${result.markedAsReplied} (inbox: ${result.inboxMarked}, queue: ${result.queueMarked})`,
+        );
         console.log(`   🧹 Cancelled ${result.cancelledFollowups} follow-ups`);
-        totalMarked += result.markedAsReplied;
-        totalCancelled += result.cancelledFollowups;
       } else {
-        console.log(`   ✅ No new replies found`);
+        console.log(`   ✅ No new replies`);
       }
     } catch (error) {
-      console.error(`   ❌ Error checking ${accountEmail}:`, error.message);
+      console.error(`   ❌ Error: ${error.message}`);
     }
+    console.log('');
   }
-  
+
   if (totalMarked > 0) {
-    console.log(`\n📊 Summary: Marked ${totalMarked} campaigns as replied, cancelled ${totalCancelled} follow-ups`);
+    console.log(
+      `📊 Summary: ${totalInboxThreads} inbox threads, marked ${totalMarked} replied, cancelled ${totalCancelled} follow-ups`,
+    );
   } else {
-    console.log(`\n✅ No new replies detected`);
+    console.log('✅ No new replies detected');
   }
 }
 
 async function main() {
   if (process.argv.includes('--once')) {
-    // Run once and exit
     await checkReplies();
     process.exit(0);
   }
-  
-  // Run continuously
-  console.log(`🚀 Starting reply polling (checking every ${intervalSeconds} seconds)`);
-  console.log(`   Press Ctrl+C to stop\n`);
-  
-  // Run immediately
+
+  console.log(`🚀 Reply polling every ${intervalSeconds}s (use --once for cron)`);
+  console.log('   Press Ctrl+C to stop\n');
+
   await checkReplies();
-  
-  // Then run on interval
+
   setInterval(async () => {
     try {
       await checkReplies();
@@ -84,8 +103,7 @@ async function main() {
   }, intervalSeconds * 1000);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('❌ Error:', err);
   process.exit(1);
 });
-

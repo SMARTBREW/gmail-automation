@@ -22,7 +22,8 @@
     "export-daily-csv": "node scripts/export-daily-by-account-csv.js",
     "export-daily-report": "node scripts/export-daily-by-account-csv.js --data-only --html exports/daily-paste.html",
     "export-daily-csv:today": "node scripts/export-daily-by-account-csv.js --today --data-only --html exports/daily-paste.html",
-    "weekly-presentation": "node scripts/weekly-presentation-report.js && node scripts/build-weekly-presentation.js"
+    "weekly-presentation": "node scripts/weekly-presentation-report.js && node scripts/build-weekly-presentation.js",
+    "poll-replies": "node bin/poll-replies.js --once"
   },
   "keywords": [
     "gmail",

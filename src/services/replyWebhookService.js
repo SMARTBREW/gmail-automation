@@ -19,6 +19,185 @@ import { Outbox } from '../models/Outbox.js';
 import { getAccountByEmail, getGmailClient } from './gmailService.js';
 import { checkThreadForReply, getLatestHumanReply } from './gmailService.js';
 import { markRepliedWithDetails } from './campaignDbService.js';
+import { getReplyPollConfig, gmailAfterDate } from './replyPollConfig.js';
+
+async function cancelPendingFollowups(campaignId) {
+  return Outbox.updateMany(
+    {
+      type: 'followup',
+      status: { $in: ['pending', 'sending'] },
+      'campaignRef.campaignId': campaignId,
+    },
+    {
+      $set: { status: 'sent' },
+      $unset: { body: '' },
+    },
+  );
+}
+
+function buildPollEligibilityQuery(now) {
+  const { pollDays, staleCheckDays } = getReplyPollConfig();
+  const pollDaysAgo = new Date(now.getTime() - pollDays * 24 * 60 * 60 * 1000);
+  const staleCheckCutoff = new Date(now.getTime() - staleCheckDays * 24 * 60 * 60 * 1000);
+
+  return {
+    $or: [
+      { lastSent: { $gte: pollDaysAgo } },
+      {
+        lastSent: { $exists: true, $ne: null },
+        $or: [
+          { lastReplyCheck: { $exists: false } },
+          { lastReplyCheck: null },
+          { lastReplyCheck: { $lt: staleCheckCutoff } },
+        ],
+      },
+    ],
+  };
+}
+
+function buildNeedsCheckQuery(now) {
+  const { minHoursBetweenChecks } = getReplyPollConfig();
+  const checkCutoff = new Date(now.getTime() - minHoursBetweenChecks * 60 * 60 * 1000);
+
+  return {
+    $or: [
+      { lastReplyCheck: { $exists: false } },
+      { lastReplyCheck: null },
+      { lastReplyCheck: { $lt: checkCutoff } },
+    ],
+  };
+}
+
+/**
+ * Rotate queue: pending follow-ups, then stalest checks, then newest sends.
+ */
+async function selectCampaignsForPoll(email, limit, now) {
+  const eligibility = buildPollEligibilityQuery(now);
+  const needsCheck = buildNeedsCheckQuery(now);
+
+  const baseQuery = {
+    from: email,
+    replied: false,
+    threadId: { $exists: true, $ne: null },
+    $and: [needsCheck, eligibility],
+  };
+
+  const pendingFollowups = await Outbox.find({
+    type: 'followup',
+    status: { $in: ['pending', 'sending'] },
+    from: email,
+  })
+    .select('campaignRef.campaignId')
+    .lean();
+
+  const priorityCampaignIds = pendingFollowups
+    .map((f) => f.campaignRef?.campaignId)
+    .filter(Boolean);
+
+  const selected = [];
+  const seen = new Set();
+
+  const addCampaigns = (list) => {
+    for (const c of list) {
+      const id = String(c._id);
+      if (seen.has(id) || selected.length >= limit) continue;
+      seen.add(id);
+      selected.push(c);
+    }
+  };
+
+  if (priorityCampaignIds.length > 0) {
+    const priority = await Campaign.find({
+      ...baseQuery,
+      _id: { $in: priorityCampaignIds },
+    }).lean();
+    addCampaigns(priority);
+  }
+
+  const remainingAfterPriority = limit - selected.length;
+  const staleSlot = Math.floor(remainingAfterPriority / 2);
+  const recentSlot = remainingAfterPriority - staleSlot;
+
+  if (staleSlot > 0) {
+    const excludeIds = [...seen];
+    const stalest = await Campaign.find({
+      ...baseQuery,
+      ...(excludeIds.length > 0 ? { _id: { $nin: excludeIds } } : {}),
+    })
+      .sort({ lastReplyCheck: 1, lastSent: -1 })
+      .limit(staleSlot)
+      .lean();
+    addCampaigns(stalest);
+  }
+
+  if (recentSlot > 0) {
+    const excludeIds = [...seen];
+    const recent = await Campaign.find({
+      ...baseQuery,
+      ...(excludeIds.length > 0 ? { _id: { $nin: excludeIds } } : {}),
+    })
+      .sort({ lastSent: -1 })
+      .limit(recentSlot)
+      .lean();
+    addCampaigns(recent);
+  }
+
+  return selected;
+}
+
+async function listRecentInboxThreadIds(email, inboxScanDays) {
+  const account = getAccountByEmail(email);
+  const gmail = getGmailClient(account.email, account.refreshToken);
+  const q = `in:inbox after:${gmailAfterDate(inboxScanDays)} -from:${email}`;
+  const threadIds = new Set();
+  let pageToken;
+
+  do {
+    const response = await gmail.users.threads.list({
+      userId: 'me',
+      q,
+      maxResults: 100,
+      pageToken,
+    });
+    for (const thread of response.data.threads || []) {
+      if (thread.id) threadIds.add(thread.id);
+    }
+    pageToken = response.data.nextPageToken;
+  } while (pageToken);
+
+  return threadIds;
+}
+
+async function tryMarkCampaignReply(campaign, email) {
+  const hasReply = await checkThreadForReply({
+    fromEmail: email,
+    threadId: campaign.threadId,
+    recipientEmail: campaign.to,
+    outboundSubject: campaign.subject || null,
+    internetMessageId: campaign.internetMessageId || null,
+    allInternetMessageIds: campaign.allInternetMessageIds || null,
+    lastSent: campaign.lastSent || null,
+  });
+
+  if (!hasReply) return { marked: false, cancelledFollowups: 0 };
+
+  const reply = await getLatestHumanReply({
+    fromEmail: email,
+    threadId: campaign.threadId,
+    recipientEmail: campaign.to,
+    outboundSubject: campaign.subject || null,
+    internetMessageId: campaign.internetMessageId || null,
+    allInternetMessageIds: campaign.allInternetMessageIds || null,
+    lastSent: campaign.lastSent || null,
+  });
+
+  if (!reply) return { marked: false, cancelledFollowups: 0 };
+
+  await markRepliedWithDetails({ campaignId: campaign._id, reply });
+  const cancelled = await cancelPendingFollowups(campaign._id);
+
+  return { marked: true, cancelledFollowups: cancelled.modifiedCount };
+}
 
 /**
  * Start watching Gmail for new messages (replies)
@@ -174,146 +353,101 @@ export async function processGmailNotification(email, historyId) {
 }
 
 /**
- * Alternative: Poll-based reply detection (simpler, no Pub/Sub needed)
- * Checks for replies periodically by polling Gmail threads
+ * Inbox-first pass: scan recent inbox threads and match unreplied campaigns by threadId.
+ * Catches replies that the rotated campaign queue never reaches.
  */
-export async function pollForReplies(email, limit = 200) {
-  try {
-    await connectMongo();
-    
-    const account = getAccountByEmail(email);
-    const gmail = getGmailClient(account.email, account.refreshToken);
-    
-    const now = new Date();
-    // Only check campaigns that:
-    // 1. Were sent in the last 30 days (extended window to catch older replies)
-    // 2. Haven't been checked in the last 6 hours (avoid redundant checks)
-    // 3. Have a threadId (required for checking)
-    const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
-    // PRIORITY: First check campaigns that have pending follow-ups (these are most critical)
-    const { Outbox } = await import('../models/Outbox.js');
-    const pendingFollowups = await Outbox.find({
-      type: 'followup',
-      status: { $in: ['pending', 'sending'] },
-      from: email
-    }).select('campaignRef.campaignId').lean();
-    
-    const priorityCampaignIds = pendingFollowups
-      .map(f => f.campaignRef?.campaignId)
-      .filter(Boolean);
-    
-    // Base query for campaigns that need checking
-    const baseQuery = {
-      from: email,
-      replied: false,
-      lastSent: { $gte: thirtyDaysAgo }, // Extended to 30 days
-      threadId: { $exists: true, $ne: null },
-      $or: [
-        { lastReplyCheck: { $exists: false } }, // Never checked
-        { lastReplyCheck: null }, // Never checked
-        { lastReplyCheck: { $lt: sixHoursAgo } }, // Checked more than 6 hours ago
-      ],
-    };
-    
-    // Get priority campaigns first (those with pending follow-ups)
-    let campaignsToCheck = [];
-    if (priorityCampaignIds.length > 0) {
-      const priorityCampaigns = await Campaign.find({
-        ...baseQuery,
-        _id: { $in: priorityCampaignIds }
-      })
-      .sort({ lastSent: -1 })
-      .limit(limit)
-      .lean();
-      campaignsToCheck = priorityCampaigns;
-    }
-    
-    // If we haven't reached the limit, get other campaigns
-    if (campaignsToCheck.length < limit) {
-      const remainingLimit = limit - campaignsToCheck.length;
-      const existingIds = campaignsToCheck.map(c => c._id);
-      const otherCampaigns = await Campaign.find({
-        ...baseQuery,
-        ...(existingIds.length > 0 ? { _id: { $nin: existingIds } } : {})
-      })
-      .sort({ lastSent: -1 })
-      .limit(remainingLimit)
-      .lean();
-      campaignsToCheck = [...campaignsToCheck, ...otherCampaigns];
-    }
-    
-    let markedAsReplied = 0;
-    let cancelledFollowups = 0;
-    
-    for (const campaign of campaignsToCheck) {
-      try {
-        // Update lastReplyCheck immediately to avoid duplicate checks if script runs in parallel
-        await Campaign.findByIdAndUpdate(
-          campaign._id,
-          { $set: { lastReplyCheck: now } }
-        );
-        
-        const hasReply = await checkThreadForReply({
-          fromEmail: email,
-          threadId: campaign.threadId,
-          recipientEmail: campaign.to,
-          outboundSubject: campaign.subject || null,
-          internetMessageId: campaign.internetMessageId || null,
-          allInternetMessageIds: campaign.allInternetMessageIds || null,
-          lastSent: campaign.lastSent || null,
-        });
-        
-        if (hasReply) {
-          const reply = await getLatestHumanReply({
-            fromEmail: email,
-            threadId: campaign.threadId,
-            recipientEmail: campaign.to,
-            outboundSubject: campaign.subject || null,
-            internetMessageId: campaign.internetMessageId || null,
-            allInternetMessageIds: campaign.allInternetMessageIds || null,
-            lastSent: campaign.lastSent || null,
-          });
+export async function pollInboxForReplies(email) {
+  await connectMongo();
+  getAccountByEmail(email);
 
-          // Mark campaign as replied and save reply details
-          await markRepliedWithDetails({ campaignId: campaign._id, reply });
+  const { inboxScanDays } = getReplyPollConfig();
+  const threadIds = await listRecentInboxThreadIds(email, inboxScanDays);
+
+  let markedAsReplied = 0;
+  let cancelledFollowups = 0;
+  let threadsScanned = threadIds.size;
+
+  for (const threadId of threadIds) {
+    const campaigns = await Campaign.find({
+      from: email,
+      threadId,
+      replied: false,
+    }).lean();
+
+    for (const campaign of campaigns) {
+      try {
+        const result = await tryMarkCampaignReply(campaign, email);
+        if (result.marked) {
           markedAsReplied++;
-          
-          // Cancel pending follow-ups
-          const cancelled = await Outbox.updateMany(
-            {
-              type: 'followup',
-              status: { $in: ['pending', 'sending'] },
-              'campaignRef.campaignId': campaign._id,
-            },
-            {
-              $set: { status: 'sent' },
-              $unset: { body: '' },
-            }
-          );
-          
-          cancelledFollowups += cancelled.modifiedCount;
-          
-          console.log(`✅ Detected reply for ${campaign.to} - marked as replied`);
+          cancelledFollowups += result.cancelledFollowups;
+          await Campaign.findByIdAndUpdate(campaign._id, { $set: { lastReplyCheck: new Date() } });
+          console.log(`✅ [inbox] Reply for ${campaign.to}`);
         }
       } catch (error) {
-        // Skip OAuth errors, etc.
         if (!error.message.includes('oauth2') && !error.message.includes('token')) {
-          console.error(`Error checking reply for ${campaign.to}:`, error.message);
+          console.error(`Error [inbox] ${campaign.to}:`, error.message);
         }
-        // Reset lastReplyCheck on error so it can be retried
-        await Campaign.findByIdAndUpdate(
-          campaign._id,
-          { $unset: { lastReplyCheck: '' } }
-        );
       }
     }
-    
+  }
+
+  return { threadsScanned, markedAsReplied, cancelledFollowups };
+}
+
+/**
+ * Campaign-queue pass: rotated selection (follow-ups, stale checks, recent sends).
+ */
+export async function pollCampaignQueueForReplies(email, limit) {
+  await connectMongo();
+  getAccountByEmail(email);
+
+  const pollLimit = limit ?? getReplyPollConfig().limit;
+  const now = new Date();
+  const campaignsToCheck = await selectCampaignsForPoll(email, pollLimit, now);
+
+  let markedAsReplied = 0;
+  let cancelledFollowups = 0;
+
+  for (const campaign of campaignsToCheck) {
+    try {
+      await Campaign.findByIdAndUpdate(campaign._id, { $set: { lastReplyCheck: now } });
+
+      const result = await tryMarkCampaignReply(campaign, email);
+      if (result.marked) {
+        markedAsReplied++;
+        cancelledFollowups += result.cancelledFollowups;
+        console.log(`✅ [queue] Reply for ${campaign.to}`);
+      }
+    } catch (error) {
+      if (!error.message.includes('oauth2') && !error.message.includes('token')) {
+        console.error(`Error [queue] ${campaign.to}:`, error.message);
+      }
+      await Campaign.findByIdAndUpdate(campaign._id, { $unset: { lastReplyCheck: '' } });
+    }
+  }
+
+  return {
+    checked: campaignsToCheck.length,
+    markedAsReplied,
+    cancelledFollowups,
+  };
+}
+
+/**
+ * Full poll: inbox-first, then rotated campaign queue.
+ */
+export async function pollForReplies(email, limit) {
+  try {
+    const inbox = await pollInboxForReplies(email);
+    const queue = await pollCampaignQueueForReplies(email, limit);
+
     return {
-      checked: campaignsToCheck.length,
-      markedAsReplied,
-      cancelledFollowups,
+      inboxThreadsScanned: inbox.threadsScanned,
+      checked: queue.checked,
+      markedAsReplied: inbox.markedAsReplied + queue.markedAsReplied,
+      cancelledFollowups: inbox.cancelledFollowups + queue.cancelledFollowups,
+      inboxMarked: inbox.markedAsReplied,
+      queueMarked: queue.markedAsReplied,
     };
   } catch (error) {
     console.error(`Error polling for replies for ${email}:`, error.message);

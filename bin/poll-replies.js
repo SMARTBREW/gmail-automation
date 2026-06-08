@@ -18,7 +18,7 @@
  *   REPLY_INBOX_SCAN_DAYS=2
  *
  * Cron example (every 15 minutes):
- *   */15 * * * * cd /path/to/gmail-automation && node bin/poll-replies.js --once >> logs/poll-replies.log 2>&1
+ *   every 15 min: cd /path/to/gmail-automation && node bin/poll-replies.js --once >> logs/poll-replies.log 2>&1
  */
 
 import dotenv from 'dotenv';

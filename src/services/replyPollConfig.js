@@ -25,3 +25,18 @@ export function gmailAfterDate(daysBack) {
   const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}/${m}/${day}`;
 }
+
+/** Reply subjects that are personal/job mail — never write to campaigns DB. */
+const NON_OUTREACH_REPLY_SUBJECT_PATTERNS = [
+  /software developer/i,
+  /\bdeveloper intern\b/i,
+  /\bjob application\b/i,
+  /\binterview\b/i,
+  /\bresume\b/i,
+  /\bcodage habitation\b/i,
+];
+
+export function shouldSkipReplySave({ reply }) {
+  const subject = String(reply?.subject || '');
+  return NON_OUTREACH_REPLY_SUBJECT_PATTERNS.some((p) => p.test(subject));
+}

@@ -1,5 +1,6 @@
 import { Campaign } from '../models/Campaign.js';
 import { CampaignTemplate } from '../models/CampaignTemplate.js';
+import { shouldSkipReplySave } from './replyPollConfig.js';
 
 export async function getTemplateForCampaign(campaignName) {
   const tpl = await CampaignTemplate.findOne({ campaignName }).lean();
@@ -86,6 +87,13 @@ export async function markReplied({ campaignId }) {
 export async function markRepliedWithDetails({ campaignId, reply }) {
   const campaign = await Campaign.findById(campaignId).lean();
   if (!campaign) return;
+
+  if (shouldSkipReplySave({ reply })) {
+    console.warn(
+      `Skipping non-outreach reply save for campaign ${campaignId} (${campaign.to}): ${reply?.subject || '(no subject)'}`,
+    );
+    return;
+  }
 
   const gmailMessageId = reply?.gmailMessageId || '';
   if (gmailMessageId) {

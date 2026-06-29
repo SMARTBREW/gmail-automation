@@ -8,6 +8,7 @@ import { connectMongo } from '../src/db/mongo.js';
 import { getTemplateForCampaign } from '../src/services/campaignDbService.js';
 import { enqueueInitial } from '../src/services/queueService.js';
 import { getAccountDisplayName, getConfiguredAccounts } from '../src/services/gmailService.js';
+import { assertPersonalCampaignAccount } from '../src/services/personalCampaignConfig.js';
 
 function usage() {
   console.log('Usage: node bin/load-initial-batch.js <contacts.json> [--window 10:00-10:30]');
@@ -67,6 +68,7 @@ async function main() {
       const { email, name = '', recipientName = '', from, campaignName } = row || {};
       if (!email || !from || !campaignName) throw new Error('Missing email/from/campaignName');
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
+      assertPersonalCampaignAccount(campaignName, from);
 
       // Use recipientName if provided, otherwise fall back to name
       // New format: recipientName is just the name (e.g., "Aastha Sharma")

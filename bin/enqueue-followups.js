@@ -25,7 +25,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { connectMongo } from '../src/db/mongo.js';
+import { Campaign } from '../src/models/Campaign.js';
 import { campaignsReadyForFollowup, getTemplateForCampaign } from '../src/services/campaignDbService.js';
+import { isOverdueForFollowup, getMaxTouchpoint } from '../src/services/followupSchedule.js';
 import { enqueueFollowup } from '../src/services/queueService.js';
 import { getAccountDisplayName, checkThreadForReply } from '../src/services/gmailService.js';
 import { Outbox } from '../src/models/Outbox.js';
@@ -39,31 +41,14 @@ async function main() {
   await connectMongo();
 
   const testMode = process.env.TEST_MODE === 'true' ? true : false;
-  const ready = await campaignsReadyForFollowup(testMode);
-  
-  // Also get ALL overdue campaigns (past maxDays threshold) to catch up
-  // This ensures campaigns that got their initial email late still get follow-ups
-  const { Campaign } = await import('../src/models/Campaign.js');
   const now = Date.now();
-  const schedule = {
-    1: [3, 5], 2: [5, 7], 3: [7, 9], 4: [7, 9], 5: [10, 13], 6: [10, 15],
-  };
+  const ready = await campaignsReadyForFollowup(testMode);
   const overdueCampaigns = await Campaign.find({
     replied: false,
-    touchpoint: { $lt: 7 },
-    lastSent: { $exists: true, $ne: null }
+    lastSent: { $exists: true, $ne: null },
   }).lean();
-  
-  const overdue = overdueCampaigns.filter(c => {
-    const currentTp = c.touchpoint || 1;
-    const [minDelay, maxDelay] = schedule[currentTp] || [999, 999];
-    const minMs = minDelay * 24 * 60 * 60 * 1000;
-    const maxMs = maxDelay * 24 * 60 * 60 * 1000;
-    const diff = now - new Date(c.lastSent).getTime();
-    // Include campaigns that are past the minimum delay (even if past max)
-    // This catches up on campaigns that got delayed initial emails
-    return diff >= minMs && diff > maxMs; // Past min but also past max = overdue, needs catch-up
-  });
+
+  const overdue = overdueCampaigns.filter((c) => isOverdueForFollowup(c, now, testMode));
   
   // Combine ready and overdue, deduplicate by campaign ID
   const allCampaignsMap = new Map();
@@ -156,11 +141,11 @@ async function main() {
       
       if (existingPending) {
           skipped++;
-        console.log(`⏭️  ${c.to}: Already has pending follow-up email (TP${c.touchpoint || 1} → TP${Math.min(7, (c.touchpoint || 1) + 1)}), skipping`);
+        console.log(`⏭️  ${c.to}: Already has pending follow-up email (TP${c.touchpoint || 1} → TP${Math.min(getMaxTouchpoint(c.campaignName), (c.touchpoint || 1) + 1)}), skipping`);
           continue;
       }
 
-      const nextTouch = Math.min(7, (c.touchpoint || 1) + 1);
+      const nextTouch = Math.min(getMaxTouchpoint(c.campaignName), (c.touchpoint || 1) + 1);
       const tpl = await getTemplateForCampaign(c.campaignName);
       const templateBody = tpl.templates[nextTouch];
       const templateSubject = tpl.subjectLines[nextTouch];

@@ -18,6 +18,7 @@ import {
   getLatestHumanReply,
 } from '../src/services/gmailService.js';
 import { markRepliedWithDetails } from '../src/services/campaignDbService.js';
+import { isPersonalCampaign, outreachCampaignFilter } from '../src/services/personalCampaignConfig.js';
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 const BROKEN = new Set(['workneeharikakaila06@gmail.com', 'mehakpaws@gmail.com']);
@@ -101,6 +102,7 @@ async function main() {
   const dbRows = await Campaign.find({
     replied: true,
     repliedAt: { $gte: bounds.start, $lt: bounds.end },
+    ...outreachCampaignFilter(),
   })
     .sort({ repliedAt: 1 })
     .lean();
@@ -138,6 +140,7 @@ async function main() {
       const campaigns = await Campaign.find({ from: email, threadId }).lean();
       if (!campaigns.length) continue;
       const c = campaigns[0];
+      if (isPersonalCampaign(c.campaignName)) continue;
 
       try {
         const has = await checkThreadForReply({

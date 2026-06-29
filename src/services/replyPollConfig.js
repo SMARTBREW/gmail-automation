@@ -8,6 +8,8 @@
  * REPLY_INBOX_SCAN_DAYS=2           Inbox-first: scan threads with activity in last N days
  */
 
+import { isPersonalCampaign } from './personalCampaignConfig.js';
+
 export function getReplyPollConfig() {
   return {
     limit: Number(process.env.REPLY_POLL_LIMIT) || 500,
@@ -36,7 +38,9 @@ const NON_OUTREACH_REPLY_SUBJECT_PATTERNS = [
   /\bcodage habitation\b/i,
 ];
 
-export function shouldSkipReplySave({ reply }) {
+export function shouldSkipReplySave({ reply, campaignName = '' }) {
   const subject = String(reply?.subject || '');
+  // Job-search replies must always be detected; NGO outreach skips job-mail subjects.
+  if (isPersonalCampaign(campaignName)) return false;
   return NON_OUTREACH_REPLY_SUBJECT_PATTERNS.some((p) => p.test(subject));
 }

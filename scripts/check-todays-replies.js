@@ -12,6 +12,7 @@ import {
   getLatestHumanReply,
 } from '../src/services/gmailService.js';
 import { markRepliedWithDetails } from '../src/services/campaignDbService.js';
+import { outreachCampaignFilter } from '../src/services/personalCampaignConfig.js';
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
@@ -103,6 +104,7 @@ async function checkAccount(accountEmail, bounds) {
       from: accountEmail,
       replied: false,
       threadId: { $in: [...todayThreadIds] },
+      ...outreachCampaignFilter(),
     }).lean();
 
     for (const campaign of campaigns) {
@@ -136,6 +138,7 @@ async function checkAccount(accountEmail, bounds) {
     from: accountEmail,
     replied: true,
     repliedAt: { $gte: bounds.start, $lt: bounds.end },
+    ...outreachCampaignFilter(),
   })
     .sort({ repliedAt: -1 })
     .select('to replyFrom replyEmail replySubject replySnippet replyBody repliedAt campaignName')

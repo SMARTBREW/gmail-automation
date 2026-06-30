@@ -129,7 +129,7 @@ function makeIdempotencyKey(obj) {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
-export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, notBefore }) {
+export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, company, notBefore }) {
   // Normalize recipientName: extract just the name part if it contains comma (format: "Name, Dear Name")
   let normalizedRecipientName = recipientName || '';
   if (normalizedRecipientName && normalizedRecipientName.includes(',')) {
@@ -171,6 +171,7 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, re
   const setFields = {
     body,
     'campaignRef.recipientName': normalizedRecipientName,
+    'campaignRef.company': company || '',
     'campaignRef.campaignName': campaignName,
     'campaignRef.originalSubject': subject,
   };
@@ -528,8 +529,8 @@ export async function processOutboxOnce() {
               }
               const senderName = getAccountDisplayName(job.from) || '';
               emailBody = emailBody.replace(/{senderName}/g, senderName);
-              
-              // Save regenerated body back to database
+              const company = job.campaignRef?.company || '';
+              emailBody = emailBody.replace(/{company}/gi, company || 'your organization');
               await Outbox.findByIdAndUpdate(job._id, { 
                 $set: { body: emailBody },
                 $unset: { lastError: '' }
@@ -568,6 +569,8 @@ export async function processOutboxOnce() {
                   }
                   const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
                   emailBody = emailBody.replace(/{senderName}/g, senderName);
+                  const company = campaign.company || '';
+                  emailBody = emailBody.replace(/{company}/gi, company || 'your organization');
                   
                   await Outbox.findByIdAndUpdate(job._id, { 
                     $set: { body: emailBody },
@@ -662,6 +665,7 @@ export async function processOutboxOnce() {
           displayName,
           subject: job.campaignRef?.originalSubject || job.subject,
           recipientName: job.campaignRef?.recipientName || '', // Ensure it's always passed
+          company: job.campaignRef?.company || '',
           threadId: res.threadId,
           messageId: res.messageId,
           internetMessageId: res.internetMessageId,

@@ -88,6 +88,12 @@ export function getAccountDisplayName(email) {
   return acc.displayName || '';
 }
 
+function encodeSubject(subject) {
+  const value = String(subject || '');
+  if (/^[\x20-\x7E]*$/.test(value)) return value;
+  return `=?UTF-8?B?${Buffer.from(value, 'utf8').toString('base64')}?=`;
+}
+
 function createEmailMessage(fromEmail, to, subject, body, { inReplyTo, references, displayName } = {}) {
   // Prefer displayName from config.json; fallback to bare email local-part
   const safeDisplay = (displayName && String(displayName).trim()) || '';
@@ -95,7 +101,7 @@ function createEmailMessage(fromEmail, to, subject, body, { inReplyTo, reference
   const message = [
     `From: ${fromHeader}`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeSubject(subject)}`,
     ...(inReplyTo ? [`In-Reply-To: ${inReplyTo}`] : []),
     ...(references ? [`References: ${references}`] : []),
     'Content-Type: text/html; charset=utf-8',

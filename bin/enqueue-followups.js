@@ -163,6 +163,8 @@ async function main() {
       }
       const senderName = c.displayName || getAccountDisplayName(c.from) || '';
       body = body.replace(/{senderName}/g, senderName);
+      const companyName = c.company ? String(c.company).trim() : 'your organization';
+      body = body.replace(/{company}/gi, companyName);
 
       const subject = `Re: ${c.subject || templateSubject || ''}`;
 

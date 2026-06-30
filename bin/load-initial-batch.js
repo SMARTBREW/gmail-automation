@@ -65,7 +65,7 @@ async function main() {
 
   for (const row of contacts) {
     try {
-      const { email, name = '', recipientName = '', from, campaignName } = row || {};
+      const { email, name = '', recipientName = '', company = '', from, campaignName } = row || {};
       if (!email || !from || !campaignName) throw new Error('Missing email/from/campaignName');
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
       assertPersonalCampaignAccount(campaignName, from);
@@ -105,11 +105,12 @@ async function main() {
       }
       const { templatesMap, subjectMap, firstTouchKeys } = meta;
       const chosenKey = firstTouchKeys[Math.floor(Math.random() * firstTouchKeys.length)];
-      const subject = subjectMap[chosenKey] ?? subjectMap[firstTouchKeys[0]] ?? ' ';
+      let subject = subjectMap[chosenKey] ?? subjectMap[firstTouchKeys[0]] ?? ' ';
       let body = templatesMap[chosenKey];
 
       // Fill placeholders
       const senderName = getAccountDisplayName(from) || '';
+      const companyName = company ? String(company).trim() : 'your organization';
       if (finalRecipientName) {
         // Use case-insensitive replace to handle any casing issues
         body = body.replace(/{recipientName}/gi, finalRecipientName);
@@ -121,10 +122,13 @@ async function main() {
         body = body.replace(/{recipientName}/gi, '');
       }
       body = body.replace(/{senderName}/gi, senderName);
+      body = body.replace(/{company}/gi, companyName);
+      subject = subject.replace(/{senderName}/gi, senderName);
+      subject = subject.replace(/{company}/gi, companyName);
 
       // Use the same notBefore for all emails (unless window is specified)
       const notBefore = windowSpec ? computeRandomNotBefore(windowSpec) : baseNotBefore;
-      await enqueueInitial({ from, to: email, subject, body, campaignName, recipientName: finalRecipientName, notBefore });
+      await enqueueInitial({ from, to: email, subject, body, campaignName, recipientName: finalRecipientName, company: company ? String(company).trim() : '', notBefore });
       queued++;
       console.log(`✅ queued: ${email} from ${from} at ~${notBefore.toLocaleTimeString()}`);
     } catch (e) {

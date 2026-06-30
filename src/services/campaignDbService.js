@@ -20,6 +20,7 @@ export async function createCampaignRecord({
   displayName,
   subject,
   recipientName,
+  company,
   threadId,
   messageId,
   internetMessageId,
@@ -51,6 +52,9 @@ export async function createCampaignRecord({
     if (recipientName && recipientName !== existing.recipientName) {
       updates.recipientName = recipientName;
     }
+    if (company && company !== existing.company) {
+      updates.company = company;
+    }
 
     if (Object.keys(updates).length > 0) {
       const updated = await Campaign.findByIdAndUpdate(
@@ -74,6 +78,7 @@ export async function createCampaignRecord({
     displayName,
     subject,
     recipientName: recipientName || '', // Ensure it's always a string
+    company: company || '',
     touchpoint: 1,
     lastSent: new Date(),
     replied: false,

@@ -11,6 +11,7 @@ const CampaignSchema = new mongoose.Schema(
     replied: { type: Boolean, default: false, index: true },
     lastSent: { type: Date, index: true },
     recipientName: { type: String },
+    company: { type: String },
     generatedBodies: { type: [String], default: [] },
     threadId: { type: String, index: true },
     messageIds: { type: [String], default: [] },

@@ -18,6 +18,7 @@ const OutboxSchema = new mongoose.Schema(
       campaignName: { type: String },
       originalSubject: { type: String },
       recipientName: { type: String }, // Added to schema to ensure proper updates
+      company: { type: String },
     },
     notBefore: { type: Date, default: () => new Date() },
     status: { type: String, enum: ['pending', 'sending', 'sent', 'failed'], default: 'pending', index: true },

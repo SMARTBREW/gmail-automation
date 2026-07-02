@@ -8,8 +8,6 @@ await connectMongo();
 
 const campaignName = JOB_SEARCH_CAMPAIGN;
 
-const RESUME_URL = 'https://drive.google.com/file/d/1rexWHvAVwS7a_KDcWdEN2VW0S_oKwTek/view';
-
 const baseStyle = `font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.65; color: #202124; max-width: 620px;`;
 
 const p = 'margin: 0 0 14px 0;';
@@ -30,7 +28,7 @@ const templates = {
 <li style="${li}"><strong>SmartRoute AI</strong>: LLM gateway with semantic caching, rate limiting, async workers, and enterprise auth</li>
 </ul>
 <p style="${p}">I'm not assuming there is an open role right now. If <strong>{company}</strong> is hiring, or if you can point me to someone on the engineering team, I'd really appreciate a referral or a quick intro.</p>
-<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
+<p style="${p}"><a href="{resumeLink}" style="${link}">View my resume</a></p>
 <p style="${p}">Happy to share more on my work or jump on a brief call if helpful.</p>
 <p style="${sig}">Best regards,<br><strong>{senderName}</strong></p>
 </div>`,
@@ -68,7 +66,7 @@ const templates = {
 <p style="${p}">Hi {recipientName},</p>
 <p style="${p}">This will be my last message unless I hear back.</p>
 <p style="${p}">I remain interested in <strong>{company}</strong> and would still appreciate a referral or intro if anything opens up on the engineering side. If it is not a fit or not the right time, no worries at all. Thank you for your time.</p>
-<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
+<p style="${p}"><a href="{resumeLink}" style="${link}">View my resume</a></p>
 <p style="${muted}">Wishing you a great week ahead.</p>
 <p style="${sig}">Kind regards,<br><strong>{senderName}</strong></p>
 </div>`,
@@ -93,7 +91,7 @@ await CampaignTemplate.create({
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
 console.log('   - 5 touchpoints (cold outreach + 4 follow-ups)');
 console.log('   - 5-7 day gap between touches');
-console.log('   - Placeholders: {recipientName}, {senderName}, {company}');
+console.log('   - Placeholders: {recipientName}, {senderName}, {company}, {resumeLink}');
 console.log('   - Personal campaign: replies stop follow-ups but are not stored or counted in outreach stats');
 console.log('   - Allowed senders: iamayushanand365@gmail.com, h3yayush@gmail.com');
 

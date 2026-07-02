@@ -12,6 +12,8 @@ const CampaignSchema = new mongoose.Schema(
     lastSent: { type: Date, index: true },
     recipientName: { type: String },
     company: { type: String },
+    trackingId: { type: String, index: true, sparse: true },
+    resumeClickedAt: { type: Date, index: true },
     generatedBodies: { type: [String], default: [] },
     threadId: { type: String, index: true },
     messageIds: { type: [String], default: [] },

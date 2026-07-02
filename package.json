@@ -24,6 +24,7 @@
     "export-daily-csv:today": "node scripts/export-daily-by-account-csv.js --today --data-only --html exports/daily-paste.html",
     "weekly-presentation": "node scripts/weekly-presentation-report.js && node scripts/build-weekly-presentation.js",
     "save-job-search": "node save-job-search-templates.js",
+    "job-search-clicks": "node scripts/job-search-resume-clicks.js",
     "poll-replies": "node bin/poll-replies.js --once"
   },
   "keywords": [

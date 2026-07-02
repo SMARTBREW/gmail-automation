@@ -2,6 +2,8 @@ import { Outbox } from '../models/Outbox.js';
 import { AccountUsage } from '../models/AccountUsage.js';
 import { sendEmail, getAccountDisplayName } from './gmailService.js';
 import { createCampaignRecord, advanceTouchpoint } from './campaignDbService.js';
+import { JOB_SEARCH_CAMPAIGN } from './personalCampaignConfig.js';
+import { ensureTrackingIdForJob, injectResumeLinkIntoBody } from './resumeTracking.js';
 import { readFileSync } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -129,7 +131,7 @@ function makeIdempotencyKey(obj) {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
-export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, company, notBefore }) {
+export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, company, trackingId, notBefore }) {
   // Normalize recipientName: extract just the name part if it contains comma (format: "Name, Dear Name")
   let normalizedRecipientName = recipientName || '';
   if (normalizedRecipientName && normalizedRecipientName.includes(',')) {
@@ -172,6 +174,7 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, re
     body,
     'campaignRef.recipientName': normalizedRecipientName,
     'campaignRef.company': company || '',
+    'campaignRef.trackingId': trackingId || '',
     'campaignRef.campaignName': campaignName,
     'campaignRef.originalSubject': subject,
   };
@@ -620,6 +623,29 @@ export async function processOutboxOnce() {
       }
       
       const headers = job.headers || {};
+
+      let trackingIdForCampaign = job.campaignRef?.trackingId || '';
+      const campaignNameForJob = job.campaignRef?.campaignName;
+      if (campaignNameForJob === JOB_SEARCH_CAMPAIGN) {
+        const { Campaign } = await import('../models/Campaign.js');
+        let campaignDoc = null;
+        if (job.campaignRef?.campaignId) {
+          campaignDoc = await Campaign.findById(job.campaignRef.campaignId).lean();
+        }
+        trackingIdForCampaign = await ensureTrackingIdForJob(job, campaignDoc);
+        if (!job.campaignRef?.trackingId) {
+          await Outbox.findByIdAndUpdate(job._id, {
+            $set: { 'campaignRef.trackingId': trackingIdForCampaign },
+          });
+        }
+        if (campaignDoc?._id && !campaignDoc.trackingId) {
+          await Campaign.findByIdAndUpdate(campaignDoc._id, {
+            $set: { trackingId: trackingIdForCampaign },
+          });
+        }
+        emailBody = injectResumeLinkIntoBody(emailBody, trackingIdForCampaign);
+      }
+
       const res = await sendEmail(job.from, job.to, job.subject, emailBody, headers);
       
       // Update usage immediately (in memory) for next email's rate limit check
@@ -666,6 +692,7 @@ export async function processOutboxOnce() {
           subject: job.campaignRef?.originalSubject || job.subject,
           recipientName: job.campaignRef?.recipientName || '', // Ensure it's always passed
           company: job.campaignRef?.company || '',
+          trackingId: job.campaignRef?.trackingId || trackingIdForCampaign || '',
           threadId: res.threadId,
           messageId: res.messageId,
           internetMessageId: res.internetMessageId,

@@ -8,7 +8,8 @@ import { connectMongo } from '../src/db/mongo.js';
 import { getTemplateForCampaign } from '../src/services/campaignDbService.js';
 import { enqueueInitial } from '../src/services/queueService.js';
 import { getAccountDisplayName, getConfiguredAccounts } from '../src/services/gmailService.js';
-import { assertPersonalCampaignAccount } from '../src/services/personalCampaignConfig.js';
+import { assertPersonalCampaignAccount, JOB_SEARCH_CAMPAIGN } from '../src/services/personalCampaignConfig.js';
+import { generateTrackingId } from '../src/services/resumeTracking.js';
 
 function usage() {
   console.log('Usage: node bin/load-initial-batch.js <contacts.json> [--window 10:00-10:30]');
@@ -128,7 +129,18 @@ async function main() {
 
       // Use the same notBefore for all emails (unless window is specified)
       const notBefore = windowSpec ? computeRandomNotBefore(windowSpec) : baseNotBefore;
-      await enqueueInitial({ from, to: email, subject, body, campaignName, recipientName: finalRecipientName, company: company ? String(company).trim() : '', notBefore });
+      const trackingId = campaignName === JOB_SEARCH_CAMPAIGN ? generateTrackingId() : '';
+      await enqueueInitial({
+        from,
+        to: email,
+        subject,
+        body,
+        campaignName,
+        recipientName: finalRecipientName,
+        company: company ? String(company).trim() : '',
+        trackingId,
+        notBefore,
+      });
       queued++;
       console.log(`✅ queued: ${email} from ${from} at ~${notBefore.toLocaleTimeString()}`);
     } catch (e) {

@@ -21,6 +21,7 @@ export async function createCampaignRecord({
   subject,
   recipientName,
   company,
+  trackingId,
   threadId,
   messageId,
   internetMessageId,
@@ -55,6 +56,9 @@ export async function createCampaignRecord({
     if (company && company !== existing.company) {
       updates.company = company;
     }
+    if (trackingId && trackingId !== existing.trackingId) {
+      updates.trackingId = trackingId;
+    }
 
     if (Object.keys(updates).length > 0) {
       const updated = await Campaign.findByIdAndUpdate(
@@ -79,6 +83,7 @@ export async function createCampaignRecord({
     subject,
     recipientName: recipientName || '', // Ensure it's always a string
     company: company || '',
+    trackingId: trackingId || '',
     touchpoint: 1,
     lastSent: new Date(),
     replied: false,

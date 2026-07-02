@@ -626,7 +626,8 @@ export async function processOutboxOnce() {
 
       let trackingIdForCampaign = job.campaignRef?.trackingId || '';
       const campaignNameForJob = job.campaignRef?.campaignName;
-      if (campaignNameForJob === JOB_SEARCH_CAMPAIGN) {
+      const resumeTrackingEnabled = process.env.RESUME_TRACKING_ENABLED === 'true';
+      if (resumeTrackingEnabled && campaignNameForJob === JOB_SEARCH_CAMPAIGN) {
         const { Campaign } = await import('../models/Campaign.js');
         let campaignDoc = null;
         if (job.campaignRef?.campaignId) {

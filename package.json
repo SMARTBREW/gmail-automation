@@ -25,6 +25,9 @@
     "weekly-presentation": "node scripts/weekly-presentation-report.js && node scripts/build-weekly-presentation.js",
     "save-job-search": "node save-job-search-templates.js",
     "job-search-clicks": "node scripts/job-search-resume-clicks.js",
+    "job-search-status": "node scripts/job-search-status.js",
+    "scan-job-replies": "node scripts/scan-job-replies.js",
+    "mark-job-bounces": "node scripts/mark-job-search-bounces.js",
     "poll-replies": "node bin/poll-replies.js --once"
   },
   "keywords": [

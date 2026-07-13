@@ -152,7 +152,7 @@ export async function markRepliedWithDetails({ campaignId, reply }) {
 
 export async function campaignsReadyForFollowup(testMode = false) {
   const now = Date.now();
-  const candidates = await Campaign.find({ replied: false }).lean();
+  const candidates = await Campaign.find({ replied: false, bounced: { $ne: true } }).lean();
 
   return candidates.filter((campaign) => isWithinFollowupWindow(campaign, now, testMode));
 }
@@ -175,7 +175,17 @@ export async function advanceTouchpoint({ campaignId, newBody, newMessageId, thr
 }
 
 export async function getUnrepliedCampaigns() {
-  return Campaign.find({ replied: false }).lean();
+  return Campaign.find({ replied: false, bounced: { $ne: true } }).lean();
+}
+
+export async function markBounced({ campaignId, reason = '' }) {
+  await Campaign.findByIdAndUpdate(campaignId, {
+    $set: {
+      bounced: true,
+      bouncedAt: new Date(),
+      bounceReason: String(reason || '').slice(0, 500),
+    },
+  });
 }
 
 

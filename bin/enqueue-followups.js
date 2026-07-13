@@ -45,6 +45,7 @@ async function main() {
   const ready = await campaignsReadyForFollowup(testMode);
   const overdueCampaigns = await Campaign.find({
     replied: false,
+    bounced: { $ne: true },
     lastSent: { $exists: true, $ne: null },
   }).lean();
 
@@ -75,6 +76,12 @@ async function main() {
       if (c.replied) {
         skipped++;
         console.log(`⏭️  ${c.to}: Already marked as replied in database`);
+        continue;
+      }
+
+      if (c.bounced) {
+        skipped++;
+        console.log(`⏭️  ${c.to}: Marked bounced — skipping follow-up`);
         continue;
       }
       

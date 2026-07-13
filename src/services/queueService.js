@@ -399,6 +399,15 @@ export async function processOutboxOnce() {
           });
           continue; // Skip - already marked as replied in database
         }
+
+        if (campaign.bounced) {
+          await Outbox.findByIdAndUpdate(job._id, {
+            $set: { status: 'sent' },
+            $unset: { body: '' },
+          });
+          console.log(`⏭️  Skipping follow-up to ${job.to} — campaign marked bounced`);
+          continue;
+        }
         
         // SECOND CHECK: Gmail API - backup check in case polling service failed
         // This is a safety net if the cron job fails or hasn't run yet

@@ -9,6 +9,7 @@ const PERSONAL_CAMPAIGNS = new Set([JOB_SEARCH_CAMPAIGN]);
 export const PERSONAL_CAMPAIGN_ACCOUNTS = new Set([
   'iamayushanand365@gmail.com',
   'h3yayush@gmail.com',
+  'ayushpy007@gmail.com',
 ]);
 
 export const PERSONAL_MAX_TOUCHPOINT = 5;

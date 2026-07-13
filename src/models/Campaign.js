@@ -14,6 +14,7 @@ const CampaignSchema = new mongoose.Schema(
     company: { type: String },
     trackingId: { type: String, index: true, sparse: true },
     resumeClickedAt: { type: Date, index: true },
+    resumeClickCount: { type: Number, default: 0 },
     bounced: { type: Boolean, default: false, index: true },
     bouncedAt: { type: Date },
     bounceReason: { type: String },

@@ -94,7 +94,7 @@ console.log(`✅ Saved "${campaignName}" campaign templates to database`);
 console.log('   - 5 touchpoints (cold outreach + 4 follow-ups)');
 console.log('   - 5-7 day gap between touches');
 console.log('   - Placeholders: {recipientName}, {senderName}, {company}');
-console.log('   - Resume: direct Google Drive link (no redirect tracking)');
+console.log('   - Resume: Google Drive link (tracking ready in code; enable on EC2 deploy)');
 console.log('   - Personal campaign: replies stop follow-ups but are not stored or counted in outreach stats');
 console.log('   - Allowed senders: iamayushanand365@gmail.com, h3yayush@gmail.com');
 

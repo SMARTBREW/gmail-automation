@@ -53,10 +53,10 @@ if (replied.length) {
 }
 
 if (clicked.length) {
-  console.log('\n--- Resume clicked ---');
+  console.log('\n--- Resume clicked (confirmed opened) ---');
   for (const r of clicked) {
     console.log(
-      `- ${r.recipientName || '-'} <${r.to}> | ${r.company || '-'} | clicked ${fmtIst(r.resumeClickedAt)}`,
+      `- ${r.recipientName || '-'} <${r.to}> | ${r.company || '-'} | clicks=${r.resumeClickCount || 1} | first ${fmtIst(r.resumeClickedAt)}`,
     );
   }
 }

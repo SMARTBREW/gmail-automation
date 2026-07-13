@@ -5,6 +5,11 @@ import { JOB_SEARCH_CAMPAIGN } from './personalCampaignConfig.js';
 export const JOB_SEARCH_RESUME_URL =
   'https://drive.google.com/file/d/1rexWHvAVwS7a_KDcWdEN2VW0S_oKwTek/view';
 
+export function isResumeTrackingEnabled() {
+  // Default ON unless explicitly disabled
+  return process.env.RESUME_TRACKING_ENABLED !== 'false';
+}
+
 export function generateTrackingId() {
   return crypto.randomUUID();
 }
@@ -37,11 +42,21 @@ export async function recordResumeClick(trackingId, meta = {}) {
 
   if (!campaign) return null;
 
-  if (!campaign.resumeClickedAt) {
-    campaign.resumeClickedAt = new Date();
-    await campaign.save();
-    console.log(`📄 Resume click: ${campaign.to} (${campaign.company || 'unknown company'})`);
+  const now = new Date();
+  const isFirstClick = !campaign.resumeClickedAt;
+
+  if (isFirstClick) {
+    campaign.resumeClickedAt = now;
   }
+  campaign.resumeClickCount = (campaign.resumeClickCount || 0) + 1;
+  await campaign.save();
+
+  const person = campaign.recipientName || '(no name)';
+  const company = campaign.company || 'unknown company';
+  console.log(
+    `📄 Resume click #${campaign.resumeClickCount}: ${person} <${campaign.to}> | ${company}` +
+      (isFirstClick ? ' | FIRST OPEN/CLICK' : ''),
+  );
 
   return campaign.toObject();
 }

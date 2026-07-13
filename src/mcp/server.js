@@ -339,7 +339,7 @@ process.stdin.on('data', (chunk) => {
 // When running as a background worker (PM2), stdin closes but we should keep the worker alive
 // PM2 runs processes without a TTY, so !isTTY means we're in worker mode
 const isWorkerMode = !process.stdin.isTTY || process.env.RUN_AS_WORKER === 'true';
-if (isWorkerMode && process.env.RESUME_TRACKING_ENABLED !== 'false') {
+if (isWorkerMode && process.env.RESUME_TRACKING_ENABLED === 'true') {
   const { startTrackingServer } = await import('../trackingServer.js');
   startTrackingServer();
 }

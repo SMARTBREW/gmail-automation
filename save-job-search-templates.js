@@ -8,45 +8,74 @@ await connectMongo();
 
 const campaignName = JOB_SEARCH_CAMPAIGN;
 
-// Plain Drive link (tracking may rewrite at send time if enabled)
 const RESUME_URL = 'https://drive.google.com/file/d/1rexWHvAVwS7a_KDcWdEN2VW0S_oKwTek/view';
 
-// Keep HTML minimal — heavy styling, bold stacks, and bullet lists look like bulk mail
+const baseStyle = `font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.65; color: #202124; max-width: 620px;`;
+
+const p = 'margin: 0 0 14px 0;';
+const sig = 'margin: 20px 0 0 0; color: #202124;';
+const link = 'color: #1a73e8; text-decoration: none; font-weight: 500;';
+const muted = 'margin: 0 0 14px 0; color: #5f6368; font-size: 14px;';
+const list = 'margin: 0 0 14px 0; padding-left: 20px;';
+const li = 'margin-bottom: 8px;';
+
 const templates = {
-  1: `<p>Hi {recipientName},</p>
-<p>Hope you're doing well. My name is {senderName}. I build backend and full-stack systems (Node.js, React, PostgreSQL, Redis, Docker), and I've been working on AI infrastructure at SmartBrew, including a RAG product and an LLM gateway used in production.</p>
-<p>I wanted to ask if {company} is hiring for engineering roles, or if you could point me to the right person on the team. No worries if timing isn't right.</p>
-<p>Resume: <a href="${RESUME_URL}">${RESUME_URL}</a></p>
-<p>Thanks for your time,<br>
-{senderName}</p>`,
+  1: `<div style="${baseStyle}">
+<p style="${p}">Hi {recipientName},</p>
+<p style="${p}">I'm <strong>{senderName}</strong>, a Full Stack and AI Infrastructure Engineer. I'm exploring opportunities at <strong>{company}</strong> and thought you might be the right person to connect with.</p>
+<p style="${p}">I focus on production-grade systems, not demos. My stack includes React, Next.js, Node.js, PostgreSQL, Redis, Docker, and modern LLM architectures.</p>
+<p style="${p}"><strong>Recent work at SmartBrew:</strong></p>
+<ul style="${list}">
+<li style="${li}"><strong>SmartSpidy</strong> — RAG platform for document ingestion, embeddings, and AI outreach</li>
+<li style="${li}"><strong>SmartRoute AI</strong> — LLM gateway with semantic caching, rate limiting, async workers, and enterprise auth</li>
+</ul>
+<p style="${p}">I'm not assuming there's an open role right now. If <strong>{company}</strong> is hiring, or if you can point me to someone on the engineering team, I'd really appreciate a referral or a quick intro.</p>
+<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume →</a></p>
+<p style="${p}">Happy to share more on my work or jump on a brief call if helpful.</p>
+<p style="${sig}">Best regards,<br><strong>{senderName}</strong></p>
+</div>`,
 
-  2: `<p>Hi {recipientName},</p>
-<p>Just following up on my earlier note about engineering roles at {company}.</p>
-<p>If nothing is open right now, even a short "not hiring" or a pointer to the right contact would help. Happy to share more about my background if useful.</p>
-<p>Thanks,<br>
-{senderName}</p>`,
+  2: `<div style="${baseStyle}">
+<p style="${p}">Hi {recipientName},</p>
+<p style="${p}">Just following up on my note from last week.</p>
+<p style="${p}">I'm exploring backend, full-stack, and AI infrastructure roles, and <strong>{company}</strong> is high on my list. No pressure if nothing is open right now — even a pointer to the right hiring contact, or a quick "not hiring," would help a lot.</p>
+<p style="${p}"><strong>Quick background:</strong></p>
+<ul style="${list}">
+<li style="${li}"><strong>SmartSpidy</strong> — RAG and outreach automation</li>
+<li style="${li}"><strong>SmartRoute AI</strong> — production LLM gateway, end to end from architecture to deployment</li>
+</ul>
+<p style="${p}">Thanks for considering it.</p>
+<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
+</div>`,
 
-  3: `<p>Hi {recipientName},</p>
-<p>Checking in once more in case my earlier emails got buried.</p>
-<p>I'm still interested in {company}. If you know who owns hiring for engineering, I'd appreciate an intro. If now isn't a good time, no problem at all.</p>
-<p>Best,<br>
-{senderName}</p>`,
+  3: `<div style="${baseStyle}">
+<p style="${p}">Hi {recipientName},</p>
+<p style="${p}">Circling back once more.</p>
+<p style="${p}">I'm looking for a team where I can own hard backend and AI infrastructure problems in production. If <strong>{company}</strong> has, or might soon have, openings in engineering, I'd be grateful for a referral or an intro to the right person.</p>
+<p style="${muted}">If the timing isn't right, totally fine. A quick note either way helps me plan my search.</p>
+<p style="${sig}">Best regards,<br><strong>{senderName}</strong></p>
+</div>`,
 
-  4: `<p>Hi {recipientName},</p>
-<p>I'll keep this short. Still open to connecting about engineering roles at {company}, or being pointed to the right person.</p>
-<p>Thanks either way,<br>
-{senderName}</p>`,
+  4: `<div style="${baseStyle}">
+<p style="${p}">Hi {recipientName},</p>
+<p style="${p}">I know inboxes get busy, so I'll keep this short.</p>
+<p style="${p}">I'm still very interested in <strong>{company}</strong> and would welcome any chance to connect — whether that's an open role, a future opening, or a pointer to the right contact on your team.</p>
+<p style="${p}">My strength is production systems: APIs, databases, auth, caching, observability, and LLM infrastructure. Happy to send a one-pager on my projects if useful.</p>
+<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
+</div>`,
 
-  5: `<p>Hi {recipientName},</p>
-<p>Last note from my side. If anything opens up on the engineering team at {company}, I'd still love an intro. Otherwise, thanks for your time and wishing you a good week.</p>
-<p>Resume: <a href="${RESUME_URL}">${RESUME_URL}</a></p>
-<p>Best,<br>
-{senderName}</p>`,
+  5: `<div style="${baseStyle}">
+<p style="${p}">Hi {recipientName},</p>
+<p style="${p}">This will be my last message unless I hear back.</p>
+<p style="${p}">I remain interested in <strong>{company}</strong> and would still appreciate a referral or intro if anything opens up on the engineering side. If it isn't a fit or not the right time, no worries at all — thank you for your time.</p>
+<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume →</a></p>
+<p style="${muted}">Wishing you a great week ahead.</p>
+<p style="${sig}">Kind regards,<br><strong>{senderName}</strong></p>
+</div>`,
 };
 
-// Subjects: avoid pipes, "Quick intro", and salesy phrases that trigger spam filters
 const subjectLines = {
-  1: 'Question about engineering roles at {company}',
+  1: "{company} hiring? Asking for a friend (it's me)",
   2: 'Following up on my note',
   3: 'Quick question for you',
   4: 'Checking in',
@@ -62,9 +91,7 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log('   - Subjects rewritten (less spam-like)');
-console.log('   - Body simplified (minimal HTML, shorter copy)');
-console.log('   - Placeholders: {recipientName}, {senderName}, {company}');
-console.log('   - Resume: Google Drive link');
+console.log('   - Restored structured layout (bold + bullets + signature)');
+console.log('   - Subject TP1: {company} hiring? Asking for a friend (it\'s me)');
 
 process.exit(0);

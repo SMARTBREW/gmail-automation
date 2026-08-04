@@ -3,26 +3,24 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { connectMongo } from '../src/db/mongo.js';
-import { Outbox } from '../src/models/Outbox.js';
+import { staggerPendingJobs } from '../src/services/queueService.js';
 
 async function main() {
   await connectMongo();
-  
+
   const now = new Date();
-  const result = await Outbox.updateMany(
-    {
-      type: 'followup',
-      status: 'pending',
-      notBefore: { $gt: now } // Only update future-scheduled emails
-    },
-    {
-      $set: { notBefore: now }
-    }
-  );
-  
-  console.log(`✅ Updated ${result.modifiedCount} follow-up emails to send immediately`);
-  console.log(`   They will be processed by the outbox worker on the next cycle`);
-  
+  const typeArg = process.argv.find((a) => a.startsWith('--type='));
+  const type = typeArg ? typeArg.split('=')[1] : 'initial';
+
+  console.log('Preparing pending emails to send...');
+  console.log('Current time:', now.toLocaleString());
+
+  const count = await staggerPendingJobs({
+    type: type === 'all' ? null : type,
+    baseTime: now,
+  });
+
+  console.log(`✅ Prepared ${count} pending email(s) with per-account stagger`);
   process.exit(0);
 }
 
@@ -30,4 +28,3 @@ main().catch((e) => {
   console.error('❌ Error:', e);
   process.exit(1);
 });
-

@@ -359,10 +359,15 @@ console.log('🧩 MCP stdio server ready' + (isWorkerMode ? ' (worker mode)' : '
 // Background worker: process outbox periodically
 // Poll outbox every 3 seconds to check for new jobs (sending respects minIntervalMs from config)
 const OUTBOX_POLL_MS = parseInt(process.env.OUTBOX_POLL_MS || '3000', 10);
+let outboxProcessing = false;
 setInterval(async () => {
+  if (outboxProcessing) return;
+  outboxProcessing = true;
   try {
     await processOutboxOnce();
-  } catch {}
+  } catch {} finally {
+    outboxProcessing = false;
+  }
 }, OUTBOX_POLL_MS);
 
 // Background cleanup: remove HTML bodies from old outbox records (every 10 minutes)

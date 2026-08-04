@@ -3,28 +3,35 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { connectMongo } from './src/db/mongo.js';
-import { Outbox } from './src/models/Outbox.js';
+import { staggerPendingJobs } from './src/services/queueService.js';
 
 async function main() {
   await connectMongo();
-  
+
   const now = new Date();
-  console.log('Updating all pending emails to be ready now...');
+  const typeArg = process.argv.find((a) => a.startsWith('--type='));
+  const type = typeArg ? typeArg.split('=')[1] : 'initial';
+  const stagger = !process.argv.includes('--no-stagger');
+
+  console.log('Preparing pending emails to send...');
   console.log('Current time:', now.toLocaleString());
-  
-  const result = await Outbox.updateMany(
-    { status: 'pending' },
-    { $set: { notBefore: now } }
-  );
-  
-  console.log(`✅ Updated ${result.modifiedCount} emails to be ready now`);
-  console.log(`\nNow make sure your deployed server is running to process them!`);
-  
+  console.log(`Type filter: ${type || 'all'}, stagger: ${stagger}`);
+
+  const count = await staggerPendingJobs({
+    type: type === 'all' ? null : type,
+    baseTime: now,
+  });
+
+  console.log(`✅ Prepared ${count} pending email(s) with${stagger ? '' : 'out'} per-account stagger`);
+  if (stagger) {
+    console.log('   Each sender sends ~1 email every 4–6 minutes in order.');
+  }
+  console.log('\nMake sure exactly one worker is running (EC2 PM2 preferred).');
+
   process.exit(0);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Error:', err);
   process.exit(1);
 });
-

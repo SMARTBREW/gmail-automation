@@ -11,6 +11,18 @@ import { getAccountDisplayName, getConfiguredAccounts } from '../src/services/gm
 import { assertPersonalCampaignAccount, JOB_SEARCH_CAMPAIGN } from '../src/services/personalCampaignConfig.js';
 import { generateTrackingId } from '../src/services/resumeTracking.js';
 
+function getAccountIntervalMs(email) {
+  try {
+    const cfg = JSON.parse(readFileSync(path.resolve(process.cwd(), 'config.json'), 'utf8'));
+    const acct = (cfg.accounts || []).find((a) => a.email === email) || {};
+    const min = acct.minIntervalMs ?? 240000;
+    const max = acct.maxIntervalMs ?? 360000;
+    return Math.floor((min + max) / 2);
+  } catch {
+    return 300000;
+  }
+}
+
 function usage() {
   console.log('Usage: node bin/load-initial-batch.js <contacts.json> [--window 10:00-10:30]');
 }
@@ -59,10 +71,9 @@ async function main() {
   const configured = new Set(getConfiguredAccounts());
   let queued = 0, failed = 0;
 
-  // Compute notBefore ONCE for all emails (unless window is specified)
-  // This ensures all emails are queued with the same timestamp
   const baseNotBefore = windowSpec ? computeRandomNotBefore(windowSpec) : new Date();
   const templateCache = new Map();
+  const accountSlotIndex = new Map();
 
   for (const row of contacts) {
     try {
@@ -127,8 +138,15 @@ async function main() {
       subject = subject.replace(/{senderName}/gi, senderName);
       subject = subject.replace(/{company}/gi, companyName);
 
-      // Use the same notBefore for all emails (unless window is specified)
-      const notBefore = windowSpec ? computeRandomNotBefore(windowSpec) : baseNotBefore;
+      // Stagger per sender (~5 min apart) so the worker doesn't reschedule hundreds at once
+      let notBefore;
+      if (windowSpec) {
+        notBefore = computeRandomNotBefore(windowSpec);
+      } else {
+        const slot = accountSlotIndex.get(from) || 0;
+        accountSlotIndex.set(from, slot + 1);
+        notBefore = new Date(baseNotBefore.getTime() + slot * getAccountIntervalMs(from));
+      }
       const trackingId = campaignName === JOB_SEARCH_CAMPAIGN ? generateTrackingId() : '';
       await enqueueInitial({
         from,

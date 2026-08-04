@@ -296,12 +296,72 @@ async function getCachedUsage(email) {
   return usage;
 }
 
-async function claimJobAtomically(now) {
+function averageIntervalMs(limits) {
+  return Math.floor((limits.minIntervalMs + limits.maxIntervalMs) / 2);
+}
+
+function earliestSendAfterLast(usage, limits, nowMs) {
+  const intervalMs = addIntervalJitter(limits);
+  if (usage?.lastSentAt) {
+    const earliest = new Date(usage.lastSentAt).getTime() + intervalMs;
+    return new Date(Math.max(earliest, nowMs));
+  }
+  return new Date(nowMs);
+}
+
+async function releaseJob(job, notBefore) {
+  const update = { $set: { status: 'pending' }, $unset: { claimedAt: '', workerId: '' } };
+  if (notBefore) {
+    const current = job.notBefore ? new Date(job.notBefore).getTime() : 0;
+    if (notBefore.getTime() > current) {
+      update.$set.notBefore = notBefore;
+    }
+  }
+  await Outbox.findByIdAndUpdate(job._id, update);
+}
+
+async function claimJobAtomically(now, excludedAccounts = new Set()) {
+  const query = { status: 'pending', notBefore: { $lte: now } };
+  if (excludedAccounts.size > 0) {
+    query.from = { $nin: Array.from(excludedAccounts) };
+  }
   return await Outbox.findOneAndUpdate(
-    { status: 'pending', notBefore: { $lte: now } },
+    query,
     { $set: { status: 'sending', claimedAt: now, workerId: String(process.pid) } },
     { sort: { notBefore: 1, createdAt: 1 }, new: true }
   ).lean();
+}
+
+/** Stagger pending jobs per sender so they don't all compete at the same notBefore. */
+export async function staggerPendingJobs({ type = null, baseTime = new Date() } = {}) {
+  const filter = { status: 'pending' };
+  if (type) filter.type = type;
+
+  const pending = await Outbox.find(filter)
+    .sort({ from: 1, createdAt: 1 })
+    .select('_id from')
+    .lean();
+
+  const slotByAccount = new Map();
+  const ops = [];
+
+  for (const job of pending) {
+    const slot = slotByAccount.get(job.from) || 0;
+    slotByAccount.set(job.from, slot + 1);
+    const limits = getAccountLimits(job.from);
+    const notBefore = new Date(baseTime.getTime() + slot * averageIntervalMs(limits));
+    ops.push({
+      updateOne: {
+        filter: { _id: job._id },
+        update: { $set: { notBefore, status: 'pending' }, $unset: { claimedAt: '', workerId: '' } },
+      },
+    });
+  }
+
+  if (ops.length) {
+    await Outbox.bulkWrite(ops);
+  }
+  return ops.length;
 }
 
 function parseRetryAfterMs(err) {
@@ -328,24 +388,21 @@ export async function processOutboxOnce() {
   const accountUsageMap = new Map();
   // Track which accounts have sent in this batch to prevent multiple sends per account
   const accountsSentThisBatch = new Set();
+  // Skip accounts already handled this batch (sent or deferred) when claiming next jobs
+  const excludedAccounts = new Set();
   
   // Removed global follow-up limit - each account uses its own dailyCap independently
   
   for (let i = 0; i < 50; i++) {
-    const job = await claimJobAtomically(now);
+    const job = await claimJobAtomically(now, excludedAccounts);
     if (!job) break;
     try {
       // CRITICAL: Only allow one email per account per batch cycle to enforce minIntervalMs
       // This prevents multiple emails from the same account being sent in the same second
       if (accountsSentThisBatch.has(job.from)) {
-        // This account already sent in this batch - reschedule to respect minIntervalMs
-        const limits = getAccountLimits(job.from);
-        const intervalWithJitter = addIntervalJitter(limits); // Random between min-max
-        const nextAt = new Date(nowMs + intervalWithJitter);
-        await Outbox.findByIdAndUpdate(job._id, { 
-          $set: { notBefore: nextAt, status: 'pending' },
-          $unset: { claimedAt: '', workerId: '' }
-        });
+        // Release without pushing notBefore forward — job keeps its staggered slot
+        excludedAccounts.add(job.from);
+        await releaseJob(job);
         continue;
       }
       
@@ -358,18 +415,16 @@ export async function processOutboxOnce() {
       const limits = getAccountLimits(job.from);
       // Daily cap check
       if (usage.sentToday >= limits.dailyCap) {
-        // spill to next reset
-        await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: usage.resetAt, status: 'pending', claimedAt: null, workerId: null } });
+        excludedAccounts.add(job.from);
+        await releaseJob(job, usage.resetAt);
         continue;
       }
       // Min interval check - use consistent timestamp (permanent optimization)
       const minIntervalMs = limits.minIntervalMs;
       if (usage.lastSentAt && nowMs - new Date(usage.lastSentAt).getTime() < minIntervalMs) {
-        // Reschedule with random jitter: between minIntervalMs and maxIntervalMs from now
-        // This prevents emails from sending at exactly the same interval
-        const intervalWithJitter = addIntervalJitter(limits); // Random between min-max
-        const nextAt = new Date(nowMs + intervalWithJitter);
-        await Outbox.findByIdAndUpdate(job._id, { $set: { notBefore: nextAt, status: 'pending', claimedAt: null, workerId: null } });
+        const nextAt = earliestSendAfterLast(usage, limits, nowMs);
+        excludedAccounts.add(job.from);
+        await releaseJob(job, nextAt);
         continue;
       }
       

@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs';
+import { CAMPAIGN_MAX_TOUCHPOINT } from './personalCampaignConfig.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -78,7 +79,7 @@ export function getCampaignsReadyForFollowup() {
   const twoDaysMs = 2 * oneDayMs;
   return data.campaigns.filter(campaign => {
     if (campaign.replied) return false;
-    if (campaign.touchpoint >= 7) return false;
+    if (campaign.touchpoint >= CAMPAIGN_MAX_TOUCHPOINT) return false;
     const lastSent = new Date(campaign.lastSent);
     const daysSince = now - lastSent;
     return daysSince >= oneDayMs && daysSince <= 3 * oneDayMs;

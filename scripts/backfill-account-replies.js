@@ -7,6 +7,7 @@ import { Campaign } from '../src/models/Campaign.js';
 import { Outbox } from '../src/models/Outbox.js';
 import { checkThreadForReply, getLatestHumanReply } from '../src/services/gmailService.js';
 import { markRepliedWithDetails } from '../src/services/campaignDbService.js';
+import { CAMPAIGN_MAX_TOUCHPOINT } from '../src/services/personalCampaignConfig.js';
 
 const fromEmail = process.argv[2];
 if (!fromEmail) {
@@ -47,7 +48,7 @@ async function main() {
     from: fromEmail,
     replied: false,
     threadId: { $exists: true, $ne: null },
-    touchpoint: { $lt: 7 },
+    touchpoint: { $lt: CAMPAIGN_MAX_TOUCHPOINT },
   })
     .sort({ createdAt: 1 })
     .lean();

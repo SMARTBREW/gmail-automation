@@ -5,6 +5,7 @@ dotenv.config();
 import { connectMongo } from '../src/db/mongo.js';
 import { Outbox } from '../src/models/Outbox.js';
 import { Campaign } from '../src/models/Campaign.js';
+import { getMaxTouchpoint } from '../src/services/followupSchedule.js';
 import { getTemplateForCampaign } from '../src/services/campaignDbService.js';
 import { getAccountDisplayName } from '../src/services/gmailService.js';
 
@@ -92,7 +93,10 @@ async function main() {
         // Use next touchpoint
         campaign = await Campaign.findById(job.campaignRef.campaignId).lean();
         if (campaign) {
-          const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
+          const nextTouch = Math.min(
+            getMaxTouchpoint(campaign.campaignName),
+            (campaign.touchpoint || 1) + 1
+          );
           const templatesMap = tpl.templates instanceof Map 
             ? Object.fromEntries(tpl.templates) 
             : tpl.templates || {};

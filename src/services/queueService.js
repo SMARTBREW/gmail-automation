@@ -3,6 +3,7 @@ import { AccountUsage } from '../models/AccountUsage.js';
 import { sendEmail, getAccountDisplayName } from './gmailService.js';
 import { createCampaignRecord, advanceTouchpoint } from './campaignDbService.js';
 import { JOB_SEARCH_CAMPAIGN } from './personalCampaignConfig.js';
+import { getMaxTouchpoint } from './followupSchedule.js';
 import { ensureTrackingIdForJob, injectResumeLinkIntoBody } from './resumeTracking.js';
 import { readFileSync } from 'fs';
 import path from 'path';
@@ -555,7 +556,10 @@ export async function processOutboxOnce() {
             }
             
               if (campaign) {
-                const nextTouch = Math.min(7, (campaign.touchpoint || 1) + 1);
+                const nextTouch = Math.min(
+                  getMaxTouchpoint(campaign.campaignName),
+                  (campaign.touchpoint || 1) + 1
+                );
                 const templatesMap = tpl.templates instanceof Map 
                   ? Object.fromEntries(tpl.templates) 
                   : tpl.templates || {};

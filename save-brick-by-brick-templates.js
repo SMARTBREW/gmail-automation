@@ -63,34 +63,6 @@ Brick by Brick | AnimalCare<br>
 The Giving Circle</p>`,
 
   5: `<p>Hello {recipientName},</p>
-<p>We have some lovely news to share.</p>
-<p>In the past few weeks, people across Gurgaon - and well beyond - have started coming together for Brick by Brick. Champions have stepped up. Bricks are being counted. A community is forming around something that genuinely matters.</p>
-<p>Every message shared, every person who donates ₹500 or ₹5,000 - it adds up to a wall. And that wall changes everything for the animals who will one day walk through Shukrana's gate.</p>
-<p>There's a quiet kind of joy in watching this happen. People choosing, freely and warmly, to show up for lives they may never meet. That's what Shukrana is already becoming - even before the first room is built.</p>
-<p>We've thought of you often through all of this. We genuinely believe your voice and your network would bring something special to this campaign.</p>
-<p>The window to be a Founding Champion - someone who was here from the very beginning - is still open.</p>
-<p>Would you like to step into it?</p>
-<p>Warmly,<br>
-<strong>{senderName}</strong><br>
-Brick by Brick | AnimalCare<br>
-The Giving Circle</p>`,
-
-  6: `<p>Hello {recipientName},</p>
-<p>We've shared the vision. We've shared the joy of what's already happening. And we know you care - that's why we keep writing.</p>
-<p>So today, we simply want to ask: Will you be a Champion for Shukrana?</p>
-<p>Here's what it looks like in practice:</p>
-<p>→ Step 1: We send you the Brick by Brick campaign message - tailored, ready to share.<br>
-→ Step 2: You forward it to 5-10 people in your network who love animals.<br>
-→ Step 3: You let us know how it goes. We take care of everything else.</p>
-<p>That's the whole ask. One round of messages. A few minutes of your time.</p>
-<p>And the ripple from that? If even 3 people from your circle donate ₹2,000 each - that's 600 bricks in the wall of Shukrana. Bricks that will stand long after the campaign ends.</p>
-<p>Reply to this message whenever you're ready. We'll take it from there with joy.</p>
-<p>With so much gratitude,<br>
-<strong>{senderName}</strong><br>
-Brick by Brick | AnimalCare<br>
-The Giving Circle</p>`,
-
-  7: `<p>Hello {recipientName},</p>
 <p>This is our last message in this series, and we want to write it the way we've tried to write all the others - with honesty and warmth, and without any pressure.</p>
 <p>We don't know what's been on your plate these past few weeks. Life is full. We understand completely.</p>
 <p>But before we close this chapter of our reaching out to you, we wanted to say one more thing.</p>
@@ -111,9 +83,7 @@ const subjectLines = {
   2: 'What it really means to be a Champion for Shukrana',
   3: "Picture this: Shukrana's doors open for the first time",
   4: "There's a window right now - and it's a meaningful one",
-  5: 'Something beautiful is happening around Shukrana',
-  6: 'One message. One circle. One wall.',
-  7: 'Our last note - and our most heartfelt',
+  5: 'Our last note - and our most heartfelt',
 };
 
 // Delete existing templates
@@ -127,8 +97,8 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log(`   - 7 touchpoint templates (initial + 6 follow-ups)`);
-console.log(`   - 7 subject lines (one for each touchpoint)`);
+console.log(`   - 5 touchpoint templates (initial + 4 follow-ups)`);
+console.log(`   - 5 subject lines (one for each touchpoint)`);
 console.log(``);
 console.log(`Templates use placeholders:`);
 console.log(`   {recipientName} - Will be replaced with actual recipient name (or removed if empty)`);

@@ -5,7 +5,8 @@ dotenv.config();
 import { connectMongo } from '../src/db/mongo.js';
 import { Campaign } from '../src/models/Campaign.js';
 import { Outbox } from '../src/models/Outbox.js';
-import { campaignsReadyForFollowup } from '../src/services/campaignDbService.js';
+import { CAMPAIGN_MAX_TOUCHPOINT } from '../src/services/personalCampaignConfig.js';
+import { getMaxTouchpoint } from '../src/services/followupSchedule.js';
 
 async function main() {
   await connectMongo();
@@ -21,7 +22,7 @@ async function main() {
     console.log('\n   Sample (first 5):');
     ready.slice(0, 5).forEach(c => {
       const daysSince = Math.floor((Date.now() - new Date(c.lastSent).getTime()) / (1000 * 60 * 60 * 24));
-      console.log(`   - ${c.to} (TP${c.touchpoint || 1} → TP${Math.min(7, (c.touchpoint || 1) + 1)}) | ${daysSince} days since last sent`);
+      console.log(`   - ${c.to} (TP${c.touchpoint || 1} → TP${Math.min(getMaxTouchpoint(c.campaignName), (c.touchpoint || 1) + 1)}) | ${daysSince} days since last sent`);
     });
   }
 
@@ -70,7 +71,7 @@ async function main() {
   const now = Date.now();
   const stuck = await Campaign.find({ 
     replied: false, 
-    touchpoint: { $lt: 7 },
+    touchpoint: { $lt: CAMPAIGN_MAX_TOUCHPOINT },
     lastSent: { $exists: true, $ne: null }
   }).lean();
 
@@ -83,9 +84,7 @@ async function main() {
       1: [3, 3],   // After TP1 → TP2 in exactly 3 days
       2: [5, 6],   // After TP2 → TP3 in 5-6 days
       3: [7, 8],   // After TP3 → TP4 in 7-8 days
-      4: [7, 8],   // After TP4 → TP5 in 7-8 days
-      5: [10, 12], // After TP5 → TP6 in 10-12 days
-      6: [10, 14], // After TP6 → TP7 in 10-14 days
+      4: [10, 15], // After TP4 → TP5 in 10-15 days
     };
     
     const [minDays] = schedule[currentTp] || [999];

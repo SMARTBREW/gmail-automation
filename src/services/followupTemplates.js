@@ -1,5 +1,5 @@
 /**
- * 7-Touchpoint Follow-up Email Templates
+ * 5-Touchpoint Follow-up Email Templates
  * Each template is designed for a specific touchpoint in the sequence
  */
 
@@ -49,29 +49,7 @@ export const followupTemplates = {
   },
   
   5: (campaign) => {
-    // Fifth follow-up - break pattern
-    return {
-      subject: `Quick question about ${campaign.subject}`,
-      body: `<p>Hi there,</p>
-<p>I wanted to reach out with a quick question—did you have a chance to review my previous message?</p>
-<p>If yes, I'd love your feedback. If not, no worries—feel free to reach out when you're ready.</p>
-<p>Warm regards,</p>`
-    };
-  },
-  
-  6: (campaign) => {
-    // Sixth follow-up - last value-add
-    return {
-      subject: `Final thoughts on ${campaign.subject}`,
-      body: `<p>Hi there,</p>
-<p>I wanted to share one final thought regarding my previous message. I believe there's real value here, and I'd hate for you to miss out.</p>
-<p>If you're interested, reply to this email. If not, I'll respect your decision and won't follow up again.</p>
-<p>Warm regards,</p>`
-    };
-  },
-  
-  7: (campaign) => {
-    // Seventh (final) follow-up - break-up email
+    // Fifth (final) follow-up - break-up email
     return {
       subject: `Closing the loop on ${campaign.subject}`,
       body: `<p>Hi there,</p>
@@ -87,8 +65,8 @@ export const followupTemplates = {
  * Get template for a specific touchpoint
  */
 export function getTemplate(touchpoint) {
-  if (touchpoint < 1 || touchpoint > 7) {
-    throw new Error(`Touchpoint must be between 1 and 7, got ${touchpoint}`);
+  if (touchpoint < 1 || touchpoint > 5) {
+    throw new Error(`Touchpoint must be between 1 and 5, got ${touchpoint}`);
   }
   return followupTemplates[touchpoint];
 }

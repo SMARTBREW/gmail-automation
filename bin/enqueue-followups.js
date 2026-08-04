@@ -8,9 +8,7 @@
  * - TP1 → TP2: 3-5 days
  * - TP2 → TP3: 5-7 days
  * - TP3 → TP4: 7-9 days
- * - TP4 → TP5: 7-9 days
- * - TP5 → TP6: 10-13 days
- * - TP6 → TP7: 10-15 days
+ * - TP4 → TP5: 10-15 days
  * 
  * IMPORTANT: The schedule is RELATIVE to lastSent date, not absolute.
  * - If TP1 was sent 10-15 days late, TP2 will be queued immediately (it's overdue)

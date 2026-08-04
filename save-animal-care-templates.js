@@ -54,26 +54,6 @@ ${footerBlock}`,
 ${footerBlock}`,
 
   5: `<p>Dear {recipientName},</p>
-<p>I thought you might like to know who else has said yes.</p>
-<p>A senior professional in Mumbai - "I've fed strays outside my office for years. This felt like finally doing something that lasts."</p>
-<p>A parent in Gurgaon - "I wanted my kids to see what responsible citizenship looks like."</p>
-<p>A pet owner in Noida - "My dog lives indoors. The ones outside deserve the same protection."</p>
-<p>They are the heroes and protectors of the voiceless. PAWSITIVE PROTECTORS</p>
-<p>I hope I'm not being a bother - do let me know if you'd prefer I stop writing, and I'll respect that completely.</p>
-<p>With gratitude & hope,<br>
-{senderName}</p>
-${footerBlock}`,
-
-  6: `<p>Hello {recipientName},</p>
-<p>We have a vaccination drive coming up in Gurgaon next Saturday.</p>
-<p>Our team typically vaccinates 30 - 150 stray dogs in a day. It would really mean something to our team to go into that day knowing you are supporting us.</p>
-<p>If there's a moment to say yes, this might be it. Not because the door closes after - it doesn't - but because every drive is a small deadline the animals on those streets are counting on.</p>
-<p>I'd be grateful to hear back from you.</p>
-<p>With best regards,<br>
-{senderName}</p>
-${footerBlock}`,
-
-  7: `<p>Dear {recipientName},</p>
 <p>I won't keep showing up in your inbox - I know your time is genuinely valuable and I respect that.</p>
 <p>I'll just say this: India's 2030 goal is real, and I would like you to play your part in it. The animals on the streets of this country are real. And the few people who choose to stand alongside - they matter more than they know.</p>
 <p>If this ever feels like the right moment, we'll be here. You know where to find me.</p>
@@ -88,9 +68,7 @@ const subjectLines = {
   2: 'Following up: Pawsitive Protectors Ambassador invitation',
   3: 'A quick note on India\'s rabies-free 2030 goal',
   4: 'What being a Pawsitive Protectors Ambassador means',
-  5: 'Who has already said yes',
-  6: 'Vaccination drive this Saturday in Gurgaon',
-  7: 'Final note from Pawsitive Protectors',
+  5: 'Final note from Pawsitive Protectors',
 };
 
 // Delete existing templates
@@ -105,8 +83,8 @@ await CampaignTemplate.create({
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
 console.log(`   - 1 touchpoint 1 template`);
-console.log(`   - 6 follow-up templates (touchpoints 2-7)`);
-console.log(`   - 7 subject lines (one for each touchpoint)`);
+console.log(`   - 4 follow-up templates (touchpoints 2-5)`);
+console.log(`   - 5 subject lines (one for each touchpoint)`);
 console.log(``);
 console.log(`Templates use placeholders:`);
 console.log(`   {recipientName} - Will be replaced with actual recipient name (or removed if empty)`);

@@ -107,9 +107,7 @@ export async function generateFollowUp({ subject, threadSummary, senderName, rec
     2: 'gentle reminder with statistics',
     3: 'personal appeal emphasizing impact',
     4: 'brief check-in with renewed urgency',
-    5: 'emotional storytelling',
-    6: 'last opportunity framing',
-    7: 'final heartfelt appeal'
+    5: 'final heartfelt appeal',
   };
   const variation = touchpointVariations[touchpoint] || 'follow-up';
   let extractedDetails = '';

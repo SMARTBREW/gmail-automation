@@ -13,6 +13,8 @@ export const PERSONAL_CAMPAIGN_ACCOUNTS = new Set([
 ]);
 
 export const PERSONAL_MAX_TOUCHPOINT = 5;
+export const NGO_MAX_TOUCHPOINT = 5;
+export const CAMPAIGN_MAX_TOUCHPOINT = 5;
 
 export function isPersonalCampaign(campaignName) {
   return PERSONAL_CAMPAIGNS.has(campaignName);

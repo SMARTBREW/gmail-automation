@@ -104,7 +104,7 @@ const tools = [
   },
   {
     name: 'send_followups',
-    description: 'Send next follow-up (touchpoints 2-7) to all ready campaigns',
+    description: 'Send next follow-up (touchpoints 2-5) to all ready campaigns',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     handler: async (args = {}) => {
       const testMode = args.testMode || process.env.TEST_MODE === 'true';

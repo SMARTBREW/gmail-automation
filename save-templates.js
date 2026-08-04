@@ -51,27 +51,6 @@ Wings of Hope | Joint Women's Programme<br>
 Giving Circle Volunteer</p>`,
 
   5: `<p>Hi {recipientName},</p>
-<p>Even if the Wings of Hope Ambassador role isn't feasible right now, here are two smaller ways you could help - both genuinely move the needle:</p>
-<ul style="padding-left:1.25em;margin:0.5em 0 1em 0">
-<li>Share our Instagram (<a href="https://www.instagram.com/wingsofhope.india/">@wingsofhope.india</a>) with one friend who cares about girls' education.</li>
-<li>Point me to one person in your network who might be a fit for the Ambassador role.</li>
-</ul>
-<p>Thanks for reading this far - either way, it's appreciated.</p>
-<p>With gratitude,<br>
-{senderName}<br>
-Wings of Hope | Joint Women's Programme<br>
-Giving Circle Volunteer</p>`,
-
-  6: `<p>Hi {recipientName},</p>
-<p>Thank you for reading this far.</p>
-<p>The reason I keep volunteering: when I understood what it actually means for a girl to lose her education, I couldn't unsee it. And the solution - a pad and a frank conversation - is small enough that it shouldn't be this hard.</p>
-<p>That's why I keep asking. Lending your voice as a Wings of Hope Ambassador would help this change stick.</p>
-<p>Warmly,<br>
-{senderName}<br>
-Wings of Hope | Joint Women's Programme<br>
-Giving Circle Volunteer</p>`,
-
-  7: `<p>Hi {recipientName},</p>
 <p>Last note from me - genuinely no pressure.</p>
 <p>I just didn't want to step away without saying thank you for the time you gave these emails.</p>
 <p>If you ever want to come back to this - as an Ambassador, a donor, or a quiet well-wisher - my inbox stays open. You can also follow along at <a href="https://www.instagram.com/wingsofhope.india/">@wingsofhope.india</a>.</p>
@@ -87,8 +66,6 @@ const subjectLines = {
   3: baseSubject,
   4: baseSubject,
   5: baseSubject,
-  6: baseSubject,
-  7: baseSubject,
 };
 
 await CampaignTemplate.deleteMany({ campaignName });
@@ -100,7 +77,7 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log(`   - 7 touchpoint templates (1 initial + follow-ups 2-7)`);
+console.log(`   - 5 touchpoint templates (1 initial + follow-ups 2-5)`);
 console.log(`   - Subject (touchpoint 1): "${baseSubject}"`);
 console.log(`   - Follow-up subjects use Re: + original first-email subject (enqueue-followups.js)`);
 console.log(``);

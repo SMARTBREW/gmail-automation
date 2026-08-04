@@ -61,28 +61,6 @@ Volunteer | Pads for Freedom<br>
 KHUSHII NGO</p>`,
 
   5: `<p>Dear {recipientName},</p>
-<p>Becoming a <strong>Pads for Freedom Cause Champion</strong> is simple and flexible. It could mean:</p>
-<p>• Speaking about the issue within your network<br>
-• Starting a fundraiser - without any personal financial obligation<br>
-• Helping more people understand why menstrual dignity matters</p>
-<p>There's no fixed template - just your voice, your authenticity, and your belief in the cause.</p>
-<p>If this feels like something you'd like to do, could we find a few minutes to discuss what it might look like for you?</p>
-<p>Best,<br>
-<strong>{senderName}</strong><br>
-Volunteer | Pads for Freedom<br>
-KHUSHII NGO</p>`,
-
-  6: `<p>Dear {recipientName},</p>
-<p>I hope you've been well. I wanted to reach out once more before pausing, and to thank you for taking the time to read my messages - I know how full days can get.</p>
-<p>If Pads for Freedom is something you'd like to explore, even briefly, I'd truly value connecting.</p>
-<p>And if now isn't the right time, I completely understand.</p>
-<p>Thank you again for your time and consideration.</p>
-<p>Warm wishes,<br>
-<strong>{senderName}</strong><br>
-Volunteer | Pads for Freedom<br>
-KHUSHII NGO</p>`,
-
-  7: `<p>Dear {recipientName},</p>
 <p>Thank you once again for your time and attention. I'll step back after this, but the invitation remains open.</p>
 <p>If at any point you'd like to support girls in continuing their education through Pads for Freedom - as a Cause Champion or in any other way - I'd be glad to reconnect.</p>
 <p>Until then, thank you for all that you already do to make the world a little more equal.</p>
@@ -98,8 +76,6 @@ const subjectLines = {
   3: 'Re: 23 million girls. One preventable reason.',
   4: 'Re: 23 million girls. One preventable reason.',
   5: 'Re: 23 million girls. One preventable reason.',
-  6: 'Re: 23 million girls. One preventable reason.',
-  7: 'Re: 23 million girls. One preventable reason.',
 };
 
 await CampaignTemplate.deleteMany({ campaignName });
@@ -111,7 +87,7 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log(`   - 7 touchpoint templates (replaced previous)`);
+console.log(`   - 5 touchpoint templates (replaced previous)`);
 console.log(`   - Subject line touchpoint 1: ${subjectLines[1]}`);
 console.log(`   - Placeholders: {recipientName}, {senderName}`);
 process.exit(0);

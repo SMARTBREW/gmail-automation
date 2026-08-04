@@ -7,6 +7,7 @@ import { Campaign } from '../src/models/Campaign.js';
 import { Outbox } from '../src/models/Outbox.js';
 import { checkThreadForReply, getLatestHumanReply } from '../src/services/gmailService.js';
 import { markRepliedWithDetails } from '../src/services/campaignDbService.js';
+import { CAMPAIGN_MAX_TOUCHPOINT } from '../src/services/personalCampaignConfig.js';
 
 async function main() {
   await connectMongo();
@@ -17,7 +18,7 @@ async function main() {
   const unrepliedCampaigns = await Campaign.find({
     replied: false,
     threadId: { $exists: true, $ne: null },
-    touchpoint: { $lt: 7 } // Only check campaigns that haven't completed all touchpoints
+    touchpoint: { $lt: CAMPAIGN_MAX_TOUCHPOINT } // Only check campaigns that haven't completed all touchpoints
   }).limit(100).lean();
 
   console.log(`Found ${unrepliedCampaigns.length} unreplied campaigns to check\n`);

@@ -22,64 +22,63 @@ const li = 'margin-bottom: 8px;';
 const templates = {
   1: `<div style="${baseStyle}">
 <p style="${p}">Hi {recipientName},</p>
-<p style="${p}">I'm <strong>{senderName}</strong>, a Full Stack and AI Infrastructure Engineer. I'm exploring opportunities at <strong>{company}</strong> and thought you might be the right person to connect with.</p>
-<p style="${p}">I focus on production-grade systems, not demos. My stack includes React, Next.js, Node.js, PostgreSQL, Redis, Docker, and modern LLM architectures.</p>
-<p style="${p}"><strong>Recent work at SmartBrew:</strong></p>
+<p style="${p}">I'm <strong>{senderName}</strong>. I build full-stack and AI infrastructure systems for production (React, Node, Postgres, Docker, LLM pipelines, the unglamorous stuff that actually ships).</p>
+<p style="${p}"><strong>{company}</strong> is one of the teams I've had my eye on for a while. I don't know if you're the right person to ask, but you're who I found, so I'm reaching out directly.</p>
+<p style="${p}"><strong>A couple of things I've shipped recently at SmartBrew:</strong></p>
 <ul style="${list}">
-<li style="${li}"><strong>SmartSpidy</strong> — RAG platform for document ingestion, embeddings, and AI outreach</li>
-<li style="${li}"><strong>SmartRoute AI</strong> — LLM gateway with semantic caching, rate limiting, async workers, and enterprise auth</li>
+<li style="${li}"><strong>SmartSpidy</strong>: RAG platform for document ingestion, embeddings, and AI outreach</li>
+<li style="${li}"><strong>SmartRoute AI</strong>: LLM gateway with semantic caching, rate limiting, async workers, and enterprise auth</li>
 </ul>
-<p style="${p}">I'm not assuming there's an open role right now. If <strong>{company}</strong> is hiring, or if you can point me to someone on the engineering team, I'd really appreciate a referral or a quick intro.</p>
-<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume →</a></p>
-<p style="${p}">Happy to share more on my work or jump on a brief call if helpful.</p>
-<p style="${sig}">Best regards,<br><strong>{senderName}</strong></p>
+<p style="${p}">If there's an opening, someone I should talk to, or you'd be open to a quick chat, I'd really appreciate it. No pressure if it's not the right time.</p>
+<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
+<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   2: `<div style="${baseStyle}">
 <p style="${p}">Hi {recipientName},</p>
-<p style="${p}">Just following up on my note from last week.</p>
-<p style="${p}">I'm exploring backend, full-stack, and AI infrastructure roles, and <strong>{company}</strong> is high on my list. No pressure if nothing is open right now — even a pointer to the right hiring contact, or a quick "not hiring," would help a lot.</p>
-<p style="${p}"><strong>Quick background:</strong></p>
+<p style="${p}">Just bumping my note from last week in case it got buried under everything else in your inbox.</p>
+<p style="${p}">I'm still keen on <strong>{company}</strong>. If you have 30 seconds to point me somewhere useful (a name, a role, or even a "not hiring right now"), that would help me a lot.</p>
+<p style="${p}"><strong>In case it's useful:</strong></p>
 <ul style="${list}">
-<li style="${li}"><strong>SmartSpidy</strong> — RAG and outreach automation</li>
-<li style="${li}"><strong>SmartRoute AI</strong> — production LLM gateway, end to end from architecture to deployment</li>
+<li style="${li}">Production APIs, auth, caching, observability. Shipped, not prototyped.</li>
+<li style="${li}">LLM infra: RAG pipelines, gateways, async workers</li>
 </ul>
-<p style="${p}">Thanks for considering it.</p>
-<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
+<p style="${sig}">Thanks,<br><strong>{senderName}</strong></p>
 </div>`,
 
   3: `<div style="${baseStyle}">
 <p style="${p}">Hi {recipientName},</p>
-<p style="${p}">Circling back once more.</p>
-<p style="${p}">I'm looking for a team where I can own hard backend and AI infrastructure problems in production. If <strong>{company}</strong> has, or might soon have, openings in engineering, I'd be grateful for a referral or an intro to the right person.</p>
-<p style="${muted}">If the timing isn't right, totally fine. A quick note either way helps me plan my search.</p>
-<p style="${sig}">Best regards,<br><strong>{senderName}</strong></p>
+<p style="${p}">Circling back once. I know you're busy.</p>
+<p style="${p}">I'm looking for a team where I can own hard backend and AI problems in production, and <strong>{company}</strong> is still near the top of my list. If you know of anything opening up, or who I should bother instead of you, I'd be grateful.</p>
+<p style="${p}">Happy to send a short write-up on my projects if that's easier than a resume.</p>
+<p style="${muted}">Either way, a quick reply helps me plan. No hard feelings if it's a no.</p>
+<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   4: `<div style="${baseStyle}">
 <p style="${p}">Hi {recipientName},</p>
-<p style="${p}">I know inboxes get busy, so I'll keep this short.</p>
-<p style="${p}">I'm still very interested in <strong>{company}</strong> and would welcome any chance to connect — whether that's an open role, a future opening, or a pointer to the right contact on your team.</p>
-<p style="${p}">My strength is production systems: APIs, databases, auth, caching, observability, and LLM infrastructure. Happy to send a one-pager on my projects if useful.</p>
+<p style="${p}">Short one. I won't take much of your time.</p>
+<p style="${p}">Still interested in <strong>{company}</strong>. Open to whatever makes sense: a role, a referral, or just a name of someone I should reach out to.</p>
+<p style="${p}">I work on production systems: APIs, databases, auth, caching, observability, and LLM infrastructure. I pick up context fast and ship reliably.</p>
 <p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   5: `<div style="${baseStyle}">
 <p style="${p}">Hi {recipientName},</p>
-<p style="${p}">This will be my last message unless I hear back.</p>
-<p style="${p}">I remain interested in <strong>{company}</strong> and would still appreciate a referral or intro if anything opens up on the engineering side. If it isn't a fit or not the right time, no worries at all — thank you for your time.</p>
-<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume →</a></p>
-<p style="${muted}">Wishing you a great week ahead.</p>
+<p style="${p}">Last note from me. I don't want to keep pinging your inbox.</p>
+<p style="${p}">I'm still interested in <strong>{company}</strong>. If there's ever a fit, an opening, or someone on the team I should talk to, I'd appreciate the nudge. If not, totally fine. Thanks for reading this far.</p>
+<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
+<p style="${muted}">All the best.</p>
 <p style="${sig}">Kind regards,<br><strong>{senderName}</strong></p>
 </div>`,
 };
 
 const subjectLines = {
-  1: "{company} hiring? Asking for a friend (it's me)",
-  2: 'Following up on my note',
-  3: 'Quick question for you',
-  4: 'Checking in',
-  5: 'Closing the loop',
+  1: "Probably the least spammy email you'll read today",
+  2: 'In case my last note vanished into inbox hell',
+  3: "Okay I'll keep this one short ({company})",
+  4: 'Last few emails before I stop bothering you',
+  5: 'Final note from {senderName} re: {company}',
 };
 
 await CampaignTemplate.deleteMany({ campaignName });
@@ -91,7 +90,7 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log('   - Restored structured layout (bold + bullets + signature)');
-console.log('   - Subject TP1: {company} hiring? Asking for a friend (it\'s me)');
+console.log('   Removed em dashes from all touchpoints');
+console.log('   Touchpoints: 5 (TP1 + TP5 include resume link)');
 
 process.exit(0);

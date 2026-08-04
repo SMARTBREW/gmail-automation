@@ -7,7 +7,7 @@ const CampaignSchema = new mongoose.Schema(
     from: { type: String, index: true },
     displayName: { type: String },
     subject: { type: String },
-    touchpoint: { type: Number, default: 1, min: 1, max: 7, index: true },
+    touchpoint: { type: Number, default: 1, min: 1, max: 5, index: true },
     replied: { type: Boolean, default: false, index: true },
     lastSent: { type: Date, index: true },
     recipientName: { type: String },

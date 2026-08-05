@@ -3,6 +3,7 @@ import { AccountUsage } from '../models/AccountUsage.js';
 import { sendEmail, getAccountDisplayName } from './gmailService.js';
 import { createCampaignRecord, advanceTouchpoint } from './campaignDbService.js';
 import { JOB_SEARCH_CAMPAIGN } from './personalCampaignConfig.js';
+import { applyJobSearchPlaceholders } from './jobSearchCopy.js';
 import { getMaxTouchpoint } from './followupSchedule.js';
 import { ensureTrackingIdForJob, injectResumeLinkIntoBody } from './resumeTracking.js';
 import { readFileSync } from 'fs';
@@ -588,17 +589,29 @@ export async function processOutboxOnce() {
               recipientName = recipientName ? recipientName.trim() : '';
               
               emailBody = templateBody;
-              if (recipientName) {
+              const senderName = getAccountDisplayName(job.from) || '';
+              const company = job.campaignRef?.company || '';
+
+              if (campaignName === JOB_SEARCH_CAMPAIGN) {
+                const touchpoint = parseInt(String(chosenKey), 10) || 1;
+                emailBody = applyJobSearchPlaceholders(emailBody, {
+                  recipientName,
+                  company,
+                  senderName,
+                  to: job.to,
+                  touchpoint,
+                });
+              } else if (recipientName) {
                 emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
               } else {
                 emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
                 emailBody = emailBody.replace(/Hi\s+{recipientName},/gi, 'Hello,');
                 emailBody = emailBody.replace(/{recipientName}/gi, '');
               }
-              const senderName = getAccountDisplayName(job.from) || '';
-              emailBody = emailBody.replace(/{senderName}/g, senderName);
-              const company = job.campaignRef?.company || '';
-              emailBody = emailBody.replace(/{company}/gi, company || 'your organization');
+              if (campaignName !== JOB_SEARCH_CAMPAIGN) {
+                emailBody = emailBody.replace(/{senderName}/g, senderName);
+                emailBody = emailBody.replace(/{company}/gi, company || 'your organization');
+              }
               await Outbox.findByIdAndUpdate(job._id, { 
                 $set: { body: emailBody },
                 $unset: { lastError: '' }
@@ -631,17 +644,28 @@ export async function processOutboxOnce() {
                 recipientName = recipientName ? recipientName.trim() : '';
                 
                   emailBody = templateBody;
-                  if (recipientName) {
+                  const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
+                  const company = campaign.company || '';
+
+                  if (campaign.campaignName === JOB_SEARCH_CAMPAIGN) {
+                    emailBody = applyJobSearchPlaceholders(emailBody, {
+                      recipientName,
+                      company,
+                      senderName,
+                      to: job.to,
+                      touchpoint: nextTouch,
+                    });
+                  } else if (recipientName) {
                     emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
                   } else {
                     emailBody = emailBody.replace(/Dear\s+{recipientName},/gi, 'Hello,');
                     emailBody = emailBody.replace(/Hi\s+{recipientName},/gi, 'Hello,');
                     emailBody = emailBody.replace(/{recipientName}/gi, '');
                   }
-                  const senderName = campaign.displayName || getAccountDisplayName(job.from) || '';
-                  emailBody = emailBody.replace(/{senderName}/g, senderName);
-                  const company = campaign.company || '';
-                  emailBody = emailBody.replace(/{company}/gi, company || 'your organization');
+                  if (campaign.campaignName !== JOB_SEARCH_CAMPAIGN) {
+                    emailBody = emailBody.replace(/{senderName}/g, senderName);
+                    emailBody = emailBody.replace(/{company}/gi, company || 'your organization');
+                  }
                   
                   await Outbox.findByIdAndUpdate(job._id, { 
                     $set: { body: emailBody },

@@ -29,6 +29,8 @@ import { isOverdueForFollowup, getMaxTouchpoint } from '../src/services/followup
 import { enqueueFollowup } from '../src/services/queueService.js';
 import { getAccountDisplayName, checkThreadForReply } from '../src/services/gmailService.js';
 import { Outbox } from '../src/models/Outbox.js';
+import { JOB_SEARCH_CAMPAIGN } from '../src/services/personalCampaignConfig.js';
+import { applyJobSearchPlaceholders } from '../src/services/jobSearchCopy.js';
 
 function ensureAngle(id) {
   if (!id) return '';
@@ -159,17 +161,28 @@ async function main() {
       // Use stored recipientName from campaign
       const recipientName = c.recipientName || '';
       let body = templateBody;
-      if (recipientName) {
+      const senderName = c.displayName || getAccountDisplayName(c.from) || '';
+      const companyName = c.company ? String(c.company).trim() : 'your organization';
+
+      if (c.campaignName === JOB_SEARCH_CAMPAIGN) {
+        body = applyJobSearchPlaceholders(body, {
+          recipientName,
+          company: companyName,
+          senderName,
+          to: c.to,
+          touchpoint: nextTouch,
+        });
+      } else if (recipientName) {
         body = body.replace(/{recipientName}/g, recipientName);
       } else {
         body = body.replace(/Dear {recipientName},/g, 'Hello,');
         body = body.replace(/Hi {recipientName},/g, 'Hello,');
         body = body.replace(/{recipientName}/g, '');
       }
-      const senderName = c.displayName || getAccountDisplayName(c.from) || '';
-      body = body.replace(/{senderName}/g, senderName);
-      const companyName = c.company ? String(c.company).trim() : 'your organization';
-      body = body.replace(/{company}/gi, companyName);
+      if (c.campaignName !== JOB_SEARCH_CAMPAIGN) {
+        body = body.replace(/{senderName}/g, senderName);
+        body = body.replace(/{company}/gi, companyName);
+      }
 
       const subject = `Re: ${c.subject || templateSubject || ''}`;
 

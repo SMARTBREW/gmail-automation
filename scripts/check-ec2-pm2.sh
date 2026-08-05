@@ -18,8 +18,8 @@ if [[ "${2:-}" == "--deploy" ]] || [[ "${1:-}" == "--deploy" ]]; then
 fi
 
 EC2_IP="${EC2_IP:-35.154.248.244}"
-EC2_USER="${EC2_USER:-ec2-user}"
-PROJECT_DIR="${EC2_PROJECT_DIR:-/home/ec2-user/gmail-automation}"
+EC2_USER="${EC2_USER:-ubuntu}"
+PROJECT_DIR="${EC2_PROJECT_DIR:-/home/ubuntu/gmail-automation}"
 
 if [[ -z "$PEM" ]]; then
   echo "❌ No SSH key provided."

@@ -10,6 +10,7 @@ import { enqueueInitial } from '../src/services/queueService.js';
 import { getAccountDisplayName, getConfiguredAccounts } from '../src/services/gmailService.js';
 import { assertPersonalCampaignAccount, JOB_SEARCH_CAMPAIGN } from '../src/services/personalCampaignConfig.js';
 import { generateTrackingId } from '../src/services/resumeTracking.js';
+import { applyJobSearchPlaceholders, applyJobSearchSubject } from '../src/services/jobSearchCopy.js';
 
 function getAccountIntervalMs(email) {
   try {
@@ -120,23 +121,41 @@ async function main() {
       let subject = subjectMap[chosenKey] ?? subjectMap[firstTouchKeys[0]] ?? ' ';
       let body = templatesMap[chosenKey];
 
+      const touchpoint = parseInt(String(chosenKey), 10) || 1;
+
       // Fill placeholders
       const senderName = getAccountDisplayName(from) || '';
       const companyName = company ? String(company).trim() : 'your organization';
-      if (finalRecipientName) {
-        // Use case-insensitive replace to handle any casing issues
+
+      if (campaignName === JOB_SEARCH_CAMPAIGN) {
+        body = applyJobSearchPlaceholders(body, {
+          recipientName: finalRecipientName,
+          company: companyName,
+          senderName,
+          to: email,
+          touchpoint,
+        });
+        subject = applyJobSearchSubject(subject, {
+          company: companyName,
+          senderName,
+          to: email,
+          touchpoint,
+        });
+      } else if (finalRecipientName) {
         body = body.replace(/{recipientName}/gi, finalRecipientName);
+        body = body.replace(/{senderName}/gi, senderName);
+        body = body.replace(/{company}/gi, companyName);
+        subject = subject.replace(/{senderName}/gi, senderName);
+        subject = subject.replace(/{company}/gi, companyName);
       } else {
-        // If no name, replace greeting + placeholder with "Hello,"
         body = body.replace(/Dear\s+{recipientName},/gi, 'Hello,');
         body = body.replace(/Hi\s+{recipientName},/gi, 'Hello,');
-        // Remove any remaining {recipientName} placeholders
         body = body.replace(/{recipientName}/gi, '');
+        body = body.replace(/{senderName}/gi, senderName);
+        body = body.replace(/{company}/gi, companyName);
+        subject = subject.replace(/{senderName}/gi, senderName);
+        subject = subject.replace(/{company}/gi, companyName);
       }
-      body = body.replace(/{senderName}/gi, senderName);
-      body = body.replace(/{company}/gi, companyName);
-      subject = subject.replace(/{senderName}/gi, senderName);
-      subject = subject.replace(/{company}/gi, companyName);
 
       // Stagger per sender (~5 min apart) so the worker doesn't reschedule hundreds at once
       let notBefore;

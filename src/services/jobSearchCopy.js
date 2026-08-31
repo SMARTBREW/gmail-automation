@@ -1,5 +1,6 @@
 /**
  * Job Search copy helpers — career inboxes (careers@, hr@, etc.) vs named contacts.
+ * Copy is role-neutral so the same templates work for HR, managers, TLs, and ICs.
  */
 
 const CAREER_LOCAL_PARTS = new Set([
@@ -12,9 +13,15 @@ const CAREER_LOCAL_PARTS = new Set([
   'jobs',
   'talent',
   'people',
+  'peopleops',
+  'peopleoperations',
+  'peopleteam',
   'humanresources',
   'hrteam',
-  'hr-team',
+  'talentacquisition',
+  'campus',
+  'campushiring',
+  'university',
   'join',
   'apply',
   'applications',
@@ -28,7 +35,8 @@ export function isCareerMailbox(email) {
     local.includes('career') ||
     local.startsWith('hr') ||
     local.includes('hiring') ||
-    local.includes('talent')
+    local.includes('talent') ||
+    local.includes('peopleops')
   );
 }
 
@@ -38,68 +46,68 @@ export function getJobSearchGreeting(recipientName) {
 }
 
 function companyLabel(company) {
-  return company?.trim() || 'your company';
+  return company?.trim() || 'your organization';
 }
 
 const COPY = {
   openingLine: {
     career: (company) =>
-      `I'm reaching out to explore engineering opportunities at <strong>${company}</strong>. I'd be grateful if my profile could be considered, or if you could direct me to the right person on your recruiting team.`,
+      `I'm reaching out to explore software engineering opportunities at <strong>${company}</strong>. I'd appreciate it if my profile could be considered, or if you could point me to the right person on your hiring or engineering team.`,
     named: (company) =>
-      `<strong>${company}</strong> is one of the teams I've had my eye on for a while. I'd love to connect about whether there might be a fit on your engineering team.`,
+      `I'm exploring software engineering opportunities at <strong>${company}</strong>. Whether you're hiring directly, work with recruiting, or know who I should speak with, I'd be grateful for any guidance.`,
   },
   followUpIntro: {
     career: () =>
-      `Just following up on my note about engineering opportunities in case it got buried in your inbox.`,
+      `Following up on my note about engineering opportunities in case it got buried.`,
     named: () =>
-      `Just bumping my note from last week in case it got buried under everything else in your inbox.`,
+      `Following up on my note from last week in case it slipped through.`,
   },
   followUpAsk: {
     career: (company) =>
-      `I'm still interested in <strong>${company}</strong>. If there are relevant openings, or if you could point me to the right recruiter or hiring manager, that would help me a lot.`,
+      `I'm still interested in <strong>${company}</strong>. If there are relevant openings, or someone on recruiting or engineering I should connect with, that would help me a lot.`,
     named: (company) =>
-      `I'm still keen on <strong>${company}</strong>. If you have 30 seconds to point me somewhere useful (a name, a role, or even a "not hiring right now"), that would help me a lot.`,
+      `I'm still interested in <strong>${company}</strong>. If there's an opening, a referral, or even just the right name to reach out to, I'd really appreciate it.`,
   },
   circleBackAsk: {
     career: (company) =>
-      `I'm looking for a team where I can own hard backend and AI problems in production, and <strong>${company}</strong> is still near the top of my list. If there are open roles, or a better contact on your recruiting team, I'd be grateful.`,
+      `I'm looking for a team where I can own backend and AI infrastructure problems in production, and <strong>${company}</strong> is still high on my list. If there are open roles, or a better contact on your side, I'd be grateful.`,
     named: (company) =>
-      `I'm looking for a team where I can own hard backend and AI problems in production, and <strong>${company}</strong> is still near the top of my list. If you know of anything opening up, or who I should reach out to instead, I'd be grateful.`,
+      `I'm looking for a team where I can own backend and AI infrastructure problems in production, and <strong>${company}</strong> is still high on my list. If you know of anything opening up, or who I should talk to instead, I'd be grateful.`,
   },
   shortAsk: {
     career: (company) =>
-      `Still interested in opportunities at <strong>${company}</strong>. Open to an application review, a referral to the right recruiter, or any guidance on current openings.`,
+      `Still interested in opportunities at <strong>${company}</strong>. Open to an application review, a referral to the right recruiter or hiring manager, or any guidance on current openings.`,
     named: (company) =>
-      `Still interested in <strong>${company}</strong>. Open to whatever makes sense: a role, a referral, or just a name of someone I should reach out to.`,
+      `Still interested in <strong>${company}</strong>. Open to whatever makes sense on your end: a role, a referral, or a name of someone I should reach out to.`,
   },
   finalAsk: {
     career: (company) =>
-      `I'm still interested in <strong>${company}</strong>. If there's a fit among your current openings, or someone on the hiring team I should contact, I'd appreciate the nudge. If not, totally fine. Thanks for reading this far.`,
+      `I'm still interested in <strong>${company}</strong>. If there's a fit among your current openings, or someone on the hiring side I should contact, I'd appreciate the nudge. If not, no worries at all.`,
     named: (company) =>
-      `I'm still interested in <strong>${company}</strong>. If there's ever a fit, an opening, or someone on the team I should talk to, I'd appreciate the nudge. If not, totally fine. Thanks for reading this far.`,
+      `I'm still interested in <strong>${company}</strong>. If there's ever a fit, an opening, or someone I should talk to, I'd appreciate the nudge. If not, totally fine. Thanks for reading this far.`,
   },
 };
 
 const SUBJECTS = {
   1: {
-    career: 'Engineering opportunities at {company} – {senderName}',
-    named: "Probably the least spammy email you'll read today",
+    career: 'Software engineering opportunities at {company} – {senderName}',
+    named: 'Software engineering opportunities at {company} – {senderName}',
   },
   2: {
-    career: 'Following up: {senderName} | {company} opportunities',
-    named: 'In case my last note vanished into inbox hell',
+    career: 'Following up: {senderName} | {company}',
+    named: 'Following up: {senderName} | {company}',
   },
   3: {
-    career: 'Quick follow-up on engineering roles at {company}',
-    named: "Okay I'll keep this one short ({company})",
+    career: 'Quick follow-up on roles at {company}',
+    named: 'Quick follow-up on roles at {company}',
   },
   4: {
-    career: 'Application follow-up – {senderName} | {company}',
-    named: 'Last few emails before I stop bothering you',
+    career: 'Checking in: {senderName} | {company}',
+    named: 'Checking in: {senderName} | {company}',
   },
   5: {
-    career: 'Final note: {senderName} | opportunities at {company}',
-    named: 'Final note from {senderName} re: {company}',
+    career: 'Final note: {senderName} | {company}',
+    named: 'Final note: {senderName} | {company}',
   },
 };
 
@@ -132,7 +140,6 @@ export function applyJobSearchPlaceholders(text, { recipientName, company, sende
     .replace(/{senderName}/gi, sender)
     .replace(/{company}/gi, companyName);
 
-  // Legacy {recipientName} support
   if (recipientName?.trim()) {
     out = out.replace(/{recipientName}/gi, recipientName.trim());
   } else {

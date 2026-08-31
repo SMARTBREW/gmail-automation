@@ -22,14 +22,14 @@ const li = 'margin-bottom: 8px;';
 const templates = {
   1: `<div style="${baseStyle}">
 <p style="${p}">{greeting}</p>
-<p style="${p}">I'm <strong>{senderName}</strong>. I build full-stack and AI infrastructure systems for production (React, Node, Postgres, Docker, LLM pipelines, the unglamorous stuff that actually ships).</p>
+<p style="${p}">I'm <strong>{senderName}</strong>, a software engineer focused on backend systems and AI infrastructure in production (Node, Postgres, Docker, LLM pipelines, and the reliability work that keeps them running).</p>
 <p style="${p}">{openingLine}</p>
-<p style="${p}"><strong>A couple of things I've shipped recently at SmartBrew:</strong></p>
+<p style="${p}"><strong>Recent work at SmartBrew:</strong></p>
 <ul style="${list}">
-<li style="${li}"><strong>SmartSpidy</strong>: RAG platform for document ingestion, embeddings, and AI outreach</li>
-<li style="${li}"><strong>SmartRoute AI</strong>: LLM gateway with semantic caching, rate limiting, async workers, and enterprise auth</li>
+<li style="${li}"><strong>SmartSpidy</strong> — document ingestion, embeddings, and AI-assisted outreach at scale</li>
+<li style="${li}"><strong>SmartRoute AI</strong> — LLM gateway with semantic caching, rate limiting, async workers, and auth</li>
 </ul>
-<p style="${p}">If there's an opening, a recruiter I should speak with, or you'd be open to a quick chat, I'd really appreciate it. No pressure if it's not the right time.</p>
+<p style="${p}">If there's a relevant opening, someone I should speak with, or you'd be open to a brief conversation, I'd really appreciate it.</p>
 <p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
 <p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
@@ -38,42 +38,43 @@ const templates = {
 <p style="${p}">{greeting}</p>
 <p style="${p}">{followUpIntro}</p>
 <p style="${p}">{followUpAsk}</p>
-<p style="${p}"><strong>In case it's useful:</strong></p>
+<p style="${p}"><strong>Quick background:</strong></p>
 <ul style="${list}">
-<li style="${li}">Production APIs, auth, caching, observability. Shipped, not prototyped.</li>
+<li style="${li}">Production APIs, auth, caching, observability — shipped, not slideware</li>
 <li style="${li}">LLM infra: RAG pipelines, gateways, async workers</li>
+<li style="${li}">Comfortable owning features end-to-end and picking up context quickly</li>
 </ul>
 <p style="${sig}">Thanks,<br><strong>{senderName}</strong></p>
 </div>`,
 
   3: `<div style="${baseStyle}">
 <p style="${p}">{greeting}</p>
-<p style="${p}">Circling back once. I know you're busy.</p>
+<p style="${p}">Circling back once — I know inboxes get busy.</p>
 <p style="${p}">{circleBackAsk}</p>
-<p style="${p}">Happy to send a short write-up on my projects if that's easier than a resume.</p>
-<p style="${muted}">Either way, a quick reply helps me plan. No hard feelings if it's a no.</p>
+<p style="${p}">Happy to share a short project write-up if that's easier than a resume.</p>
+<p style="${muted}">A quick yes, no, or "talk to X" helps me plan. No hard feelings either way.</p>
 <p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   4: `<div style="${baseStyle}">
 <p style="${p}">{greeting}</p>
-<p style="${p}">Short one. I won't take much of your time.</p>
+<p style="${p}">Short note — I won't take much of your time.</p>
 <p style="${p}">{shortAsk}</p>
-<p style="${p}">I work on production systems: APIs, databases, auth, caching, observability, and LLM infrastructure. I pick up context fast and ship reliably.</p>
+<p style="${p}">I work on production systems: APIs, databases, auth, caching, observability, and LLM infrastructure. I ship reliably and ramp fast on new codebases.</p>
 <p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   5: `<div style="${baseStyle}">
 <p style="${p}">{greeting}</p>
-<p style="${p}">Last note from me. I don't want to keep pinging your inbox.</p>
+<p style="${p}">Last note from me — I don't want to keep filling your inbox.</p>
 <p style="${p}">{finalAsk}</p>
 <p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
-<p style="${muted}">All the best.</p>
+<p style="${muted}">Wishing you a good week either way.</p>
 <p style="${sig}">Kind regards,<br><strong>{senderName}</strong></p>
 </div>`,
 };
 
-// Subjects resolved at enqueue/send time via jobSearchCopy (career vs named)
+// Subjects resolved at enqueue/send time via jobSearchCopy
 const subjectLines = {
   1: 'Job Search TP1',
   2: 'Job Search TP2',
@@ -91,7 +92,7 @@ await CampaignTemplate.create({
 });
 
 console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log('   Career inbox copy (careers@, hr@, recruitment@, etc.) supported');
+console.log('   Role-neutral copy (HR, managers, TLs, SDEs, career inboxes)');
 console.log('   Touchpoints: 5 (TP1 + TP5 include resume link)');
 
 process.exit(0);

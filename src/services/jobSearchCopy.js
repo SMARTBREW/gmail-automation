@@ -1,6 +1,6 @@
 /**
- * Job Search copy helpers — career inboxes (careers@, hr@, etc.) vs named contacts.
- * Copy is role-neutral so the same templates work for HR, managers, TLs, and ICs.
+ * Job Search copy helpers — warm, direct, no ultimatums.
+ * 4 touchpoints. Avoid em/en dashes in copy.
  */
 
 const CAREER_LOCAL_PARTS = new Set([
@@ -42,7 +42,7 @@ export function isCareerMailbox(email) {
 
 export function getJobSearchGreeting(recipientName) {
   const name = String(recipientName || '').trim();
-  return name ? `Hi ${name},` : 'Hello,';
+  return name ? `Hi ${name},` : 'Hi,';
 }
 
 function companyLabel(company) {
@@ -50,64 +50,66 @@ function companyLabel(company) {
 }
 
 const COPY = {
+  tldr: {
+    career: () =>
+      `I don't have many hobbies outside building software. When I find a company whose product I respect, I want to contribute: heads down, shipping, helping take something from 0 to 1 or 1 to 100. That's what I'm optimizing for right now.`,
+    named: () =>
+      `I don't have many hobbies outside building software. When I find a company whose product I respect, I want to contribute: heads down, shipping, helping take something from 0 to 1 or 1 to 100. That's what I'm optimizing for right now.`,
+  },
   openingLine: {
     career: (company) =>
-      `I'm reaching out to explore software engineering opportunities at <strong>${company}</strong>. I'd appreciate it if my profile could be considered, or if you could point me to the right person on your hiring or engineering team.`,
+      `Really respected what <strong>${company}</strong> is building and wanted to reach out to see if there are openings for engineers, or if you could point me to the right person on the hiring / engineering side.`,
     named: (company) =>
-      `I'm exploring software engineering opportunities at <strong>${company}</strong>. Whether you're hiring directly, work with recruiting, or know who I should speak with, I'd be grateful for any guidance.`,
+      `Really respected what <strong>${company}</strong> is building and wanted to reach out to see if there were any openings for engineers on the team (or if you know who I should talk to).`,
+  },
+  askLine: {
+    career: (company) =>
+      `I'd love to be part of a team at <strong>${company}</strong> that's building hard things. Looking forward to hearing from you whenever you have a moment.`,
+    named: (company) =>
+      `I'd love to be part of a team at <strong>${company}</strong> that's building hard things. Looking forward to hearing from you whenever you have a moment.`,
   },
   followUpIntro: {
     career: () =>
-      `Following up on my note about engineering opportunities in case it got buried.`,
+      `Just floating my earlier note back up in case it got buried.`,
     named: () =>
-      `Following up on my note from last week in case it slipped through.`,
+      `Just floating my earlier note back up in case it got buried.`,
   },
   followUpAsk: {
     career: (company) =>
-      `I'm still interested in <strong>${company}</strong>. If there are relevant openings, or someone on recruiting or engineering I should connect with, that would help me a lot.`,
+      `I'm still very interested in <strong>${company}</strong>. If there are relevant openings, or someone on recruiting / engineering I should connect with, I'd really appreciate it.`,
     named: (company) =>
-      `I'm still interested in <strong>${company}</strong>. If there's an opening, a referral, or even just the right name to reach out to, I'd really appreciate it.`,
+      `I'm still very interested in <strong>${company}</strong>. If there's an opening, a referral, or even just the right name to reach out to, I'd really appreciate it.`,
   },
   circleBackAsk: {
     career: (company) =>
-      `I'm looking for a team where I can own backend and AI infrastructure problems in production, and <strong>${company}</strong> is still high on my list. If there are open roles, or a better contact on your side, I'd be grateful.`,
+      `I'm looking for a lean team where I can own backend and AI infra end-to-end, and <strong>${company}</strong> is still high on that list. If there are open roles, or a better contact on your side, I'd be grateful.`,
     named: (company) =>
-      `I'm looking for a team where I can own backend and AI infrastructure problems in production, and <strong>${company}</strong> is still high on my list. If you know of anything opening up, or who I should talk to instead, I'd be grateful.`,
-  },
-  shortAsk: {
-    career: (company) =>
-      `Still interested in opportunities at <strong>${company}</strong>. Open to an application review, a referral to the right recruiter or hiring manager, or any guidance on current openings.`,
-    named: (company) =>
-      `Still interested in <strong>${company}</strong>. Open to whatever makes sense on your end: a role, a referral, or a name of someone I should reach out to.`,
+      `I'm looking for a lean team where I can own backend and AI infra end-to-end, and <strong>${company}</strong> is still high on that list. If you know of anything opening up, or who owns hiring, I'd be grateful.`,
   },
   finalAsk: {
     career: (company) =>
-      `I'm still interested in <strong>${company}</strong>. If there's a fit among your current openings, or someone on the hiring side I should contact, I'd appreciate the nudge. If not, no worries at all.`,
+      `I'll leave this as my last note for now. I'm still interested in <strong>${company}</strong>. If there's a fit among your openings, or someone on hiring I should contact, I'd appreciate the nudge. If not, totally fine.`,
     named: (company) =>
-      `I'm still interested in <strong>${company}</strong>. If there's ever a fit, an opening, or someone I should talk to, I'd appreciate the nudge. If not, totally fine. Thanks for reading this far.`,
+      `I'll leave this as my last note for now. I'm still interested in <strong>${company}</strong>. If there's a fit, an opening, or someone I should talk to, I'd appreciate the nudge. If not, totally fine.`,
   },
 };
 
 const SUBJECTS = {
   1: {
-    career: 'Software engineering opportunities at {company} – {senderName}',
-    named: 'Software engineering opportunities at {company} – {senderName}',
+    career: 'Engineering at {company}',
+    named: 'Engineering at {company}',
   },
   2: {
-    career: 'Following up: {senderName} | {company}',
-    named: 'Following up: {senderName} | {company}',
+    career: 'Following up: Engineering at {company}',
+    named: 'Following up: Engineering at {company}',
   },
   3: {
-    career: 'Quick follow-up on roles at {company}',
-    named: 'Quick follow-up on roles at {company}',
+    career: 'Quick follow-up on {company}',
+    named: 'Quick follow-up on {company}',
   },
   4: {
-    career: 'Checking in: {senderName} | {company}',
-    named: 'Checking in: {senderName} | {company}',
-  },
-  5: {
-    career: 'Final note: {senderName} | {company}',
-    named: 'Final note: {senderName} | {company}',
+    career: 'Last note for now: {senderName} | {company}',
+    named: 'Last note for now: {senderName} | {company}',
   },
 };
 
@@ -131,11 +133,12 @@ export function applyJobSearchPlaceholders(text, { recipientName, company, sende
 
   let out = text
     .replace(/{greeting}/gi, greeting)
+    .replace(/{tldr}/gi, pickCopy('tldr', isCareer, company))
     .replace(/{openingLine}/gi, pickCopy('openingLine', isCareer, company))
+    .replace(/{askLine}/gi, pickCopy('askLine', isCareer, company))
     .replace(/{followUpIntro}/gi, pickCopy('followUpIntro', isCareer, company))
     .replace(/{followUpAsk}/gi, pickCopy('followUpAsk', isCareer, company))
     .replace(/{circleBackAsk}/gi, pickCopy('circleBackAsk', isCareer, company))
-    .replace(/{shortAsk}/gi, pickCopy('shortAsk', isCareer, company))
     .replace(/{finalAsk}/gi, pickCopy('finalAsk', isCareer, company))
     .replace(/{senderName}/gi, sender)
     .replace(/{company}/gi, companyName);
@@ -143,8 +146,8 @@ export function applyJobSearchPlaceholders(text, { recipientName, company, sende
   if (recipientName?.trim()) {
     out = out.replace(/{recipientName}/gi, recipientName.trim());
   } else {
-    out = out.replace(/Dear\s+{recipientName},/gi, 'Hello,');
-    out = out.replace(/Hi\s+{recipientName},/gi, 'Hello,');
+    out = out.replace(/Dear\s+{recipientName},/gi, 'Hi,');
+    out = out.replace(/Hi\s+{recipientName},/gi, 'Hi,');
     out = out.replace(/{recipientName}/gi, '');
   }
 

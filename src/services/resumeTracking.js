@@ -3,7 +3,7 @@ import { Campaign } from '../models/Campaign.js';
 import { JOB_SEARCH_CAMPAIGN } from './personalCampaignConfig.js';
 
 export const JOB_SEARCH_RESUME_URL =
-  'https://drive.google.com/file/d/1rexWHvAVwS7a_KDcWdEN2VW0S_oKwTek/view';
+  'https://drive.google.com/file/d/17Dqpul2EjBejrK4CZuSywHHc0fjFPU_U/view';
 
 export function isResumeTrackingEnabled() {
   // Default ON unless explicitly disabled

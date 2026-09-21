@@ -12,7 +12,7 @@ export const PERSONAL_CAMPAIGN_ACCOUNTS = new Set([
   'ayushpy007@gmail.com',
 ]);
 
-export const PERSONAL_MAX_TOUCHPOINT = 5;
+export const PERSONAL_MAX_TOUCHPOINT = 4;
 export const NGO_MAX_TOUCHPOINT = 5;
 export const CAMPAIGN_MAX_TOUCHPOINT = 5;
 

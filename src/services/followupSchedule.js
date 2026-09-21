@@ -1,6 +1,7 @@
 import {
   isPersonalCampaign,
   CAMPAIGN_MAX_TOUCHPOINT,
+  PERSONAL_MAX_TOUCHPOINT,
 } from './personalCampaignConfig.js';
 
 const NGO_SCHEDULE_DAYS = {
@@ -17,22 +18,21 @@ const NGO_SCHEDULE_MINUTES = {
   4: [5, 6],
 };
 
+// Gaps after TP1 / TP2 / TP3 (3 follow-ups → 4 total touches)
 const PERSONAL_SCHEDULE_DAYS = {
   1: [5, 7],
   2: [5, 7],
   3: [5, 7],
-  4: [5, 7],
 };
 
 const PERSONAL_SCHEDULE_MINUTES = {
   1: [1, 2],
   2: [1, 2],
   3: [1, 2],
-  4: [1, 2],
 };
 
-export function getMaxTouchpoint(_campaignName) {
-  return CAMPAIGN_MAX_TOUCHPOINT;
+export function getMaxTouchpoint(campaignName) {
+  return isPersonalCampaign(campaignName) ? PERSONAL_MAX_TOUCHPOINT : CAMPAIGN_MAX_TOUCHPOINT;
 }
 
 export function getFollowupSchedule(campaignName, testMode = false) {

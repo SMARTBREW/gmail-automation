@@ -8,7 +8,11 @@ await connectMongo();
 
 const campaignName = JOB_SEARCH_CAMPAIGN;
 
-const RESUME_URL = 'https://drive.google.com/file/d/1rexWHvAVwS7a_KDcWdEN2VW0S_oKwTek/view';
+const RESUME_URL = 'https://drive.google.com/file/d/17Dqpul2EjBejrK4CZuSywHHc0fjFPU_U/view';
+const SMARTSPIDY_URL = 'https://smartspidy.smartbrew.in/';
+const SMARTROUTE_URL = 'https://github.com/Ayush701-code-zm/LLM-Gatway';
+const EXYNTRA_URL = 'http://exyntra.com/';
+const GIVING_CIRCLE_URL = 'https://thegivingcircle.in/';
 
 const baseStyle = `font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.65; color: #202124; max-width: 620px;`;
 
@@ -16,71 +20,71 @@ const p = 'margin: 0 0 14px 0;';
 const sig = 'margin: 20px 0 0 0; color: #202124;';
 const link = 'color: #1a73e8; text-decoration: none; font-weight: 500;';
 const muted = 'margin: 0 0 14px 0; color: #5f6368; font-size: 14px;';
-const list = 'margin: 0 0 14px 0; padding-left: 20px;';
-const li = 'margin-bottom: 8px;';
+const tldrBox = 'margin: 0 0 18px 0; padding: 12px 14px; background: #f8f9fa; border-left: 3px solid #202124;';
 
 const templates = {
   1: `<div style="${baseStyle}">
+<div style="${tldrBox}">
+<p style="margin: 0 0 6px 0;"><strong>tldr;</strong></p>
+<p style="margin: 0;">{tldr}</p>
+</div>
 <p style="${p}">{greeting}</p>
-<p style="${p}">I'm <strong>{senderName}</strong>, a software engineer focused on backend systems and AI infrastructure in production (Node, Postgres, Docker, LLM pipelines, and the reliability work that keeps them running).</p>
 <p style="${p}">{openingLine}</p>
-<p style="${p}"><strong>Recent work at SmartBrew:</strong></p>
-<ul style="${list}">
-<li style="${li}"><strong>SmartSpidy</strong> — document ingestion, embeddings, and AI-assisted outreach at scale</li>
-<li style="${li}"><strong>SmartRoute AI</strong> — LLM gateway with semantic caching, rate limiting, async workers, and auth</li>
-</ul>
-<p style="${p}">If there's a relevant opening, someone I should speak with, or you'd be open to a brief conversation, I'd really appreciate it.</p>
+<p style="${p}">I've been heads-down building production systems at <strong>SmartBrew</strong>, the kind of work where reliability actually matters. A few things I shipped:</p>
+<p style="${p}"><strong><a href="${SMARTSPIDY_URL}" style="${link}">SmartSpidy</a></strong>: document ingestion, embeddings, and AI-assisted outreach that runs at scale.<br>
+<strong><a href="${SMARTROUTE_URL}" style="${link}">SmartRoute AI</a></strong>: an LLM gateway with semantic caching, rate limiting, async workers, and auth. The infrastructure that makes AI products usable.</p>
+<p style="${p}">I've also shipped production platforms end-to-end: <strong><a href="${EXYNTRA_URL}" style="${link}">Exyntra</a></strong> (enterprise technology and AI transformation) and <strong><a href="${GIVING_CIRCLE_URL}" style="${link}">The Giving Circle</a></strong> (trusted donation / NGO impact platform in India).</p>
+<p style="${p}">My strongest suit is owning the messy middle: backend systems (Node, Postgres), reliability, and LLM/AI infrastructure, from idea to something people depend on. I care less about titles and more about being on a team that's building something real.</p>
+<p style="${p}">{askLine}</p>
 <p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
 <p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   2: `<div style="${baseStyle}">
+<div style="${tldrBox}">
+<p style="margin: 0 0 6px 0;"><strong>tldr;</strong></p>
+<p style="margin: 0;">Still very interested in <strong>{company}</strong>. If you're hiring engineers, or know who owns that, I'd love a short conversation.</p>
+</div>
 <p style="${p}">{greeting}</p>
 <p style="${p}">{followUpIntro}</p>
 <p style="${p}">{followUpAsk}</p>
-<p style="${p}"><strong>Quick background:</strong></p>
-<ul style="${list}">
-<li style="${li}">Production APIs, auth, caching, observability — shipped, not slideware</li>
-<li style="${li}">LLM infra: RAG pipelines, gateways, async workers</li>
-<li style="${li}">Comfortable owning features end-to-end and picking up context quickly</li>
-</ul>
-<p style="${sig}">Thanks,<br><strong>{senderName}</strong></p>
+<p style="${p}">What I bring: I ship production systems end-to-end. APIs, data/LLM pipelines, auth, caching, workers, and I stay with them until they hold under load. I'm looking for hard problems and a lean team where I can contribute quickly.</p>
+<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a> · <a href="${SMARTSPIDY_URL}" style="${link}">SmartSpidy</a> · <a href="${SMARTROUTE_URL}" style="${link}">SmartRoute AI</a></p>
+<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   3: `<div style="${baseStyle}">
+<div style="${tldrBox}">
+<p style="margin: 0 0 6px 0;"><strong>tldr;</strong></p>
+<p style="margin: 0;"><strong>{company}</strong> is still high on my list. Happy to chat, take a referral, or hear if timing isn't right.</p>
+</div>
 <p style="${p}">{greeting}</p>
-<p style="${p}">Circling back once — I know inboxes get busy.</p>
 <p style="${p}">{circleBackAsk}</p>
-<p style="${p}">Happy to share a short project write-up if that's easier than a resume.</p>
-<p style="${muted}">A quick yes, no, or "talk to X" helps me plan. No hard feelings either way.</p>
+<p style="${p}">I've built things people use: <a href="${EXYNTRA_URL}" style="${link}">Exyntra</a>, <a href="${GIVING_CIRCLE_URL}" style="${link}">The Giving Circle</a>, plus AI infra at SmartBrew (<a href="${SMARTSPIDY_URL}" style="${link}">SmartSpidy</a>, <a href="${SMARTROUTE_URL}" style="${link}">SmartRoute AI</a>). I own the stack from idea to production.</p>
+<p style="${p}">A short call, a referral, or even a quick "not right now" would all help. Totally understand either way.</p>
+<p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
 <p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 
   4: `<div style="${baseStyle}">
+<div style="${tldrBox}">
+<p style="margin: 0 0 6px 0;"><strong>tldr;</strong></p>
+<p style="margin: 0;">Last note from me on this thread. Still interested in <strong>{company}</strong>, and grateful for any reply when you have a moment.</p>
+</div>
 <p style="${p}">{greeting}</p>
-<p style="${p}">Short note — I won't take much of your time.</p>
-<p style="${p}">{shortAsk}</p>
-<p style="${p}">I work on production systems: APIs, databases, auth, caching, observability, and LLM infrastructure. I ship reliably and ramp fast on new codebases.</p>
-<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
-</div>`,
-
-  5: `<div style="${baseStyle}">
-<p style="${p}">{greeting}</p>
-<p style="${p}">Last note from me — I don't want to keep filling your inbox.</p>
 <p style="${p}">{finalAsk}</p>
+<p style="${p}">I build backend and AI infrastructure for production. I'd love to be heads down on a hard problem with a team that cares about shipping. If that's close to what you're hiring for, I'd be glad to talk.</p>
 <p style="${p}"><a href="${RESUME_URL}" style="${link}">View my resume</a></p>
-<p style="${muted}">Wishing you a good week either way.</p>
-<p style="${sig}">Kind regards,<br><strong>{senderName}</strong></p>
+<p style="${muted}">No pressure at all. Thanks for reading this far.</p>
+<p style="${sig}">Best,<br><strong>{senderName}</strong></p>
 </div>`,
 };
 
-// Subjects resolved at enqueue/send time via jobSearchCopy
 const subjectLines = {
   1: 'Job Search TP1',
   2: 'Job Search TP2',
   3: 'Job Search TP3',
   4: 'Job Search TP4',
-  5: 'Job Search TP5',
 };
 
 await CampaignTemplate.deleteMany({ campaignName });
@@ -91,8 +95,5 @@ await CampaignTemplate.create({
   subjectLines,
 });
 
-console.log(`✅ Saved "${campaignName}" campaign templates to database`);
-console.log('   Role-neutral copy (HR, managers, TLs, SDEs, career inboxes)');
-console.log('   Touchpoints: 5 (TP1 + TP5 include resume link)');
-
+console.log(`✅ Saved "${campaignName}" — softer tone, no em dashes`);
 process.exit(0);

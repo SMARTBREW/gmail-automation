@@ -10,7 +10,7 @@ import { enqueueInitial } from '../src/services/queueService.js';
 import { getAccountDisplayName, getConfiguredAccounts } from '../src/services/gmailService.js';
 import { assertPersonalCampaignAccount, JOB_SEARCH_CAMPAIGN } from '../src/services/personalCampaignConfig.js';
 import { generateTrackingId } from '../src/services/resumeTracking.js';
-import { applyJobSearchPlaceholders, applyJobSearchSubject } from '../src/services/jobSearchCopy.js';
+import { applyJobSearchPlaceholders, applyJobSearchSubject, normalizeCompanyType } from '../src/services/jobSearchCopy.js';
 
 function getAccountIntervalMs(email) {
   try {
@@ -78,7 +78,7 @@ async function main() {
 
   for (const row of contacts) {
     try {
-      const { email, name = '', recipientName = '', company = '', from, campaignName } = row || {};
+      const { email, name = '', recipientName = '', company = '', companyType = '', type = '', from, campaignName } = row || {};
       if (!email || !from || !campaignName) throw new Error('Missing email/from/campaignName');
       if (!configured.has(from)) throw new Error(`Owner not in config.json: ${from}`);
       assertPersonalCampaignAccount(campaignName, from);
@@ -93,6 +93,8 @@ async function main() {
       }
       // Normalize: trim whitespace and ensure it's not empty
       finalRecipientName = finalRecipientName ? finalRecipientName.trim() : '';
+
+      const resolvedCompanyType = normalizeCompanyType(companyType || type);
 
       let meta = templateCache.get(campaignName);
       if (!meta) {
@@ -134,12 +136,14 @@ async function main() {
           senderName,
           to: email,
           touchpoint,
+          companyType: resolvedCompanyType,
         });
         subject = applyJobSearchSubject(subject, {
           company: companyName,
           senderName,
           to: email,
           touchpoint,
+          companyType: resolvedCompanyType,
         });
       } else if (finalRecipientName) {
         body = body.replace(/{recipientName}/gi, finalRecipientName);
@@ -175,11 +179,16 @@ async function main() {
         campaignName,
         recipientName: finalRecipientName,
         company: company ? String(company).trim() : '',
+        companyType: campaignName === JOB_SEARCH_CAMPAIGN ? resolvedCompanyType : undefined,
         trackingId,
         notBefore,
       });
       queued++;
-      console.log(`✅ queued: ${email} from ${from} at ~${notBefore.toLocaleTimeString()}`);
+      console.log(
+        `✅ queued: ${email} from ${from} at ~${notBefore.toLocaleTimeString()}${
+          campaignName === JOB_SEARCH_CAMPAIGN ? ` [${resolvedCompanyType}]` : ''
+        }`,
+      );
     } catch (e) {
       failed++;
       console.error(`❌ ${row?.email || 'unknown'}: ${e.message}`);

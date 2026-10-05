@@ -171,6 +171,7 @@ async function main() {
           senderName,
           to: c.to,
           touchpoint: nextTouch,
+          companyType: c.companyType || 'product',
         });
       } else if (recipientName) {
         body = body.replace(/{recipientName}/g, recipientName);

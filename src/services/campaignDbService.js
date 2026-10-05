@@ -21,6 +21,7 @@ export async function createCampaignRecord({
   subject,
   recipientName,
   company,
+  companyType,
   trackingId,
   threadId,
   messageId,
@@ -56,6 +57,9 @@ export async function createCampaignRecord({
     if (company && company !== existing.company) {
       updates.company = company;
     }
+    if (companyType && companyType !== existing.companyType) {
+      updates.companyType = companyType;
+    }
     if (trackingId && trackingId !== existing.trackingId) {
       updates.trackingId = trackingId;
     }
@@ -83,6 +87,7 @@ export async function createCampaignRecord({
     subject,
     recipientName: recipientName || '', // Ensure it's always a string
     company: company || '',
+    companyType: companyType || 'product',
     trackingId: trackingId || '',
     touchpoint: 1,
     lastSent: new Date(),

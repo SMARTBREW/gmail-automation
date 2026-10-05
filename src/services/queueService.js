@@ -3,7 +3,7 @@ import { AccountUsage } from '../models/AccountUsage.js';
 import { sendEmail, getAccountDisplayName } from './gmailService.js';
 import { createCampaignRecord, advanceTouchpoint } from './campaignDbService.js';
 import { JOB_SEARCH_CAMPAIGN } from './personalCampaignConfig.js';
-import { applyJobSearchPlaceholders } from './jobSearchCopy.js';
+import { applyJobSearchPlaceholders, normalizeCompanyType } from './jobSearchCopy.js';
 import { getMaxTouchpoint } from './followupSchedule.js';
 import { ensureTrackingIdForJob, injectResumeLinkIntoBody } from './resumeTracking.js';
 import { readFileSync } from 'fs';
@@ -133,7 +133,7 @@ function makeIdempotencyKey(obj) {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
-export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, company, trackingId, notBefore }) {
+export async function enqueueInitial({ from, to, subject, body, campaignName, recipientName, company, companyType, trackingId, notBefore }) {
   // Normalize recipientName: extract just the name part if it contains comma (format: "Name, Dear Name")
   let normalizedRecipientName = recipientName || '';
   if (normalizedRecipientName && normalizedRecipientName.includes(',')) {
@@ -176,6 +176,7 @@ export async function enqueueInitial({ from, to, subject, body, campaignName, re
     body,
     'campaignRef.recipientName': normalizedRecipientName,
     'campaignRef.company': company || '',
+    'campaignRef.companyType': normalizeCompanyType(companyType),
     'campaignRef.trackingId': trackingId || '',
     'campaignRef.campaignName': campaignName,
     'campaignRef.originalSubject': subject,
@@ -600,6 +601,7 @@ export async function processOutboxOnce() {
                   senderName,
                   to: job.to,
                   touchpoint,
+                  companyType: job.campaignRef?.companyType || 'product',
                 });
               } else if (recipientName) {
                 emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
@@ -654,6 +656,7 @@ export async function processOutboxOnce() {
                       senderName,
                       to: job.to,
                       touchpoint: nextTouch,
+                      companyType: campaign.companyType || job.campaignRef?.companyType || 'product',
                     });
                   } else if (recipientName) {
                     emailBody = emailBody.replace(/{recipientName}/gi, recipientName);
@@ -785,6 +788,7 @@ export async function processOutboxOnce() {
           subject: job.campaignRef?.originalSubject || job.subject,
           recipientName: job.campaignRef?.recipientName || '', // Ensure it's always passed
           company: job.campaignRef?.company || '',
+          companyType: job.campaignRef?.companyType || 'product',
           trackingId: job.campaignRef?.trackingId || trackingIdForCampaign || '',
           threadId: res.threadId,
           messageId: res.messageId,

@@ -12,6 +12,8 @@ const CampaignSchema = new mongoose.Schema(
     lastSent: { type: Date, index: true },
     recipientName: { type: String },
     company: { type: String },
+    /** Job Search track: product | services */
+    companyType: { type: String, enum: ['product', 'services'], default: 'product' },
     trackingId: { type: String, index: true, sparse: true },
     resumeClickedAt: { type: Date, index: true },
     resumeClickCount: { type: Number, default: 0 },
